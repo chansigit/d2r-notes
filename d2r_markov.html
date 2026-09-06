@@ -32,7 +32,8 @@ td, th { border: 1px solid #ccc; padding: 6px 12px; text-align: left; vertical-a
 <h3>1.1 为什么因子化仍然成立</h3>
 <p>C 页第 2 节的关键是联合出现概率 $P(S)=\mu\prod_r g(d_r)$ 沿相邻间距因子化。在 Markov 下这一点依然成立,原因是<b>同一个词 $w$ 的两次出现之间,Markov 记忆完全由 $w$ 自身提供</b>:第一份 $w$ 结束时的上下文是 $w$ 的末 $m$ 个字母 $c_0=w_{k-m+1}\cdots w_k$,与更早的历史无关(Markov 性)。所以给定 $w$ 出现在 $s_i$,下一次出现在 $s_{i+1}$ 的条件概率只依赖 $d=s_{i+1}-s_i$。</p>
 
-<h3>1.2 新的 gap 权重</h3>
+<h3>1.2 间距权重 $g(d)$ 在 Markov 下的形式</h3>
+<p>回忆 B6 的记号:$g(d)$ 是"已知位置 $i$ 是 $w$,位置 $i+d$ 也是 $w$"的条件概率,$d$ 是两次出现的起点间距。i.i.d. 下 $d\ge k$ 时它是常数 $\mu$;Markov 下两段都要重算。</p>
 <div class="eq">$$
 \mu(w) = \pi(w_1\cdots w_m)\prod_{j=m+1}^{k}P(w_j\mid w_{j-m}\cdots w_{j-1})
 $$</div>
