@@ -39,6 +39,22 @@ td, th { border: 1px solid #ccc; padding: 6px 12px; text-align: left; vertical-a
 <p>A 到 D 页只讲 word count statistics 本身:一个词出现几次,均值方差是多少,全部词的配对数 $N$ 的均值方差是多少。本页回到出发点:用这些量构造检测重复的统计量,说清它在零假设下服从什么分布,怎样得到 p 值,以及参数从序列本身估计、Markov 阶数的选择、模糊符号这些实际问题。题外话页记录了得到推荐形式的讨论过程,本页只给结论和依据。</p>
 <p>记号沿用 B0、D0。零假设 $H_0$:序列由 i.i.d.(B 页)或 $m$ 阶 Markov 链(D 页)生成,没有重复。下标 0 表示在 $H_0$ 下取期望或方差。</p>
 
+<div class="note">
+<b>稀疏区与稠密区。</b>本页反复用到这两个词,定义只看一个数:零假设下整条序列里词相同的位置对的期望个数 $\mathbf E_0[N]\approx\tilde n^2c^k$($c=\sum_ap_a^2$,B7)。
+<ul>
+<li><b>稀疏区</b>:$\mathbf E_0[N]$ 只有零点几到几个。等价地说每个词的期望计数 $\lambda_w=\tilde n\mu_w\ll1$,绝大多数词一次都不出现,出现的只出现一次;$N$ 多数时候是 0。</li>
+<li><b>稠密区</b>:$\mathbf E_0[N]$ 上百,每个词出现很多次,计数近似正态。</li>
+<li>分界大约在 $\tilde n\approx c^{-k/2}$;$k=8$、$c=0.26$ 时 $\tilde n\approx220$。</li>
+</ul>
+<table>
+<tr><th>$k$</th><th>$\tilde n=150$(一条 read)</th><th>$\tilde n=2000$</th><th>$\tilde n=10^6$</th></tr>
+<tr><td>6</td><td>$\mathbf E_0[N]\approx7$,边界</td><td>1200,稠密</td><td>稠密</td></tr>
+<tr><td>8</td><td>0.5,稀疏</td><td>84,接近稠密</td><td>稠密</td></tr>
+<tr><td>10</td><td>0.03,极稀疏</td><td>5.7,稀疏</td><td>稠密</td></tr>
+</table>
+D2R 的工作区(read 长几百、$k=7\sim8$)在稀疏区。本页大半结论由此而来:零分布是离散偏态的、$Z$ 只能排序(E2);Poisson 近似对自重叠词偏差大(B5.3);逐词标准化失效(E1);参数插入的偏差不可忽略(E3)。换成整条基因组或长 contig 就进了稠密区,这些顾虑大多消失,正态近似和逐词标准化都可用。
+</div>
+
 <h2>E0. D2R 回顾</h2>
 <p>D2R 论文(Chen 等,2019)的统计量,按论文编号:</p>
 <div class="eq">$$
