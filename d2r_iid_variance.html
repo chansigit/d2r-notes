@@ -32,64 +32,36 @@ td, th { border: 1px solid #ccc; padding: 6px 12px; text-align: left; vertical-a
 <h1>C. D2R 论文的 i.i.d. 处理与 $\mathbf{Var}[X_w(X_w-1)]$ 的精确闭式</h1>
 <p class="ref"><a href="index.html">词计数的统计学:从一枚硬币到 Markov 链</a> ▸ <a href="d2r_history.html">A. 来历</a> · <a href="d2r_theory.html">B. i.i.d. 理论</a> · 本页 C · <a href="d2r_markov.html">D. Markov</a></p>
 <h2>引子</h2>
-<p>B 页正在按"词频 → 均值 → 方差 → 阶乘矩 → 分布"的顺序逐节重写。本页先把两件已经算清楚的事放在一起,供 B 页写到相应位置时引用:</p>
+<p>本页是 B 页的两个附属内容,单独成页是为了不把 B 的主线打断:</p>
 <ol>
-<li>D2R 论文当年在 i.i.d. 下是怎么处理的:方差式 (4)、二阶阶乘矩式 (5)、Poisson 近似式 (6)、最终统计量式 (7),以及被放弃的变体。这是对论文第 2 节的逐式回顾。</li>
-<li>论文说 $X_w(X_w-1)$ 的方差没有简单闭式。第 2、3 节说明它其实有精确闭式,并把它完全展开。</li>
+<li>D2R 论文当年在 i.i.d. 下是怎么写的:方差式 (4)、二阶阶乘矩式 (5)、Poisson 近似式 (6)、最终统计量式 (7),以及被放弃的变体。B3、B5 已经把 (4)(5)(6) 推导过并讨论了适用范围,这里只按论文原编号把式子列出来,方便对照。</li>
+<li>论文说 $X_w(X_w-1)$ 的方差没有简单闭式。B6 讲了思路并给出生成函数 (B25);第 2、3 节把它展成显式的有限和,再完全展开成 $\tilde n$ 的多项式,并给出验证。</li>
 </ol>
-<p>记号沿用 B0:$\tilde n=n-k+1$,$\mu(w)$ 为任一位置出现 $w$ 的概率,$\varepsilon_u(w)$ 为 border 指示,$\delta(w)=\sum_{d=1}^{k-1}\varepsilon_{k-d}(w)\prod_{j>k-d}p_{w_j}$ 为 overlapping coefficient(A2)。全页只讨论 i.i.d.;Markov 背景在 D 页。</p>
+<p>记号沿用 B0:$\tilde n=n-k+1$,$\mu(w)$ 为任一位置出现 $w$ 的概率,$\varepsilon_u(w)$ 为 border 指示,$\delta(w)$ 为 overlapping coefficient,$g(d)=\mu_d/\mu$ 为 B6 的间距条件概率。全页只讨论 i.i.d.;Markov 背景在 D 页。</p>
 
 <h2>1. 回顾:D2R 论文在 i.i.d. 下的处理</h2>
 <p>论文第 2 节在 A2 的条件概率基础上,先写出 $X_w$ 的均值和方差,再由此得到 D2R 所需的 $\mathbf E[X_w(X_w-1)]$,最后用 Poisson 近似简化。下面按原式编号逐一回顾。</p>
 <h3>1.1 方差:论文式 (4)</h3>
-<p>间距为 $d$ 的位置对共有 $\tilde n - d$ 对。精确地:</p>
-<div class="eq">$$
-\mathbf{Var}[X_w] = \tilde n\,\mu(1-\mu) + 2\sum_{d=1}^{k-1} (\tilde n - d)\Big[\varepsilon_{k-d}(w)\,\mu \prod_{j=k-d+1}^{k} p_{w_j} - \mu^2\Big]
-$$</div>
-<p>当 $\tilde n \gg k$ 时用 $\tilde n$ 代替 $\tilde n - d$(忽略边界效应),协方差项整理为 $2\tilde n\,\mu\,[\delta(w) - (k-1)\mu]$,即论文式 (4)(Waterman 1995):</p>
 <div class="eq">$$
 \begin{aligned}
 \mathbf{E}[X_w] &= \tilde n\,\mu(w) \\
 \mathbf{Var}[X_w] &= \tilde n\,\mu(w)[1-\mu(w)] + 2\tilde n\,\mu(w)\big[\delta(w) - (k-1)\mu(w)\big]
 \end{aligned} \tag{4}
 $$</div>
-<div class="note">
-<b>两个方向的修正。</b>相对于把 $X_w$ 当二项分布的朴素方差 $\tilde n\mu(1-\mu)$:
-<ul>
-<li>$-2\tilde n(k-1)\mu^2$:$k-1$ 种重叠间距下,若不能自重叠,两处同时出现是不可能的(概率 0 而非 $\mu^2$),所以负相关,方差<b>降低</b>。非自重叠词是欠离散的。</li>
-<li>$+2\tilde n\mu\delta(w)$:能自重叠的词在这些间距下同时出现的概率远高于 $\mu^2$,正相关,方差<b>升高</b>。像 <span class="mono">aaaa</span> 这样的词高度成簇。</li>
-</ul>
-</div>
+<p>这是 B3 的近似式 (B10):精确式 (B9) 里把位置对数 $\tilde n-d$ 换成了 $\tilde n$,差不随 $\tilde n$ 增长。两个修正项的含义(欠离散、成簇)见 B3.4 的方框。</p>
 
 <h3>1.2 二阶阶乘矩:论文式 (5)</h3>
-<p>这是 $D_2^R$ 真正需要的量。由 $\mathbf{E}[X(X-1)] = \mathbf{Var}[X] + (\mathbf{E}X)^2 - \mathbf{E}X$ 代入式 (4):</p>
+<p>论文由 $\mathbf{E}[X(X-1)] = \mathbf{Var}[X] + (\mathbf{E}X)^2 - \mathbf{E}X$ 代入式 (4) 得到:</p>
 <div class="eq">$$
-\begin{aligned}
-\mathbf{E}[X_w(X_w-1)]
-&= \tilde n\mu(1-\mu) + 2\tilde n\mu[\delta - (k-1)\mu] + \tilde n^2\mu^2 - \tilde n\mu \\
-&= \tilde n^2\mu^2 - \tilde n\mu^2 - 2(k-1)\tilde n\mu^2 + 2\tilde n\delta\mu \\
-&= (\tilde n^2 - 2k\tilde n + \tilde n)\,\mu(w)^2 + 2\tilde n\,\delta(w)\,\mu(w)
-\end{aligned} \tag{5}
+\mathbf{E}[X_w(X_w-1)] = (\tilde n^2 - 2k\tilde n + \tilde n)\,\mu(w)^2 + 2\tilde n\,\delta(w)\,\mu(w) \tag{5}
 $$</div>
-<p>也可以直接算:$\mathbf{E}[X(X-1)] = \sum_{i\ne j}\mathbf{E}[\mathbb{I}_i\mathbb{I}_j]$ 就是"有序位置对同时为 $w$"的期望数,非重叠对贡献 $\mu^2$,重叠对贡献 $\delta$ 相关项,与式 (5) 一致。</p>
-<p>直观上,式 (5) 的三块分别是:</p>
-<table>
-<tr><td>$\tilde n^2\mu^2$</td><td>把所有位置对当独立时的匹配期望,主导项</td></tr>
-<tr><td>$-(2k-1)\tilde n\mu^2$</td><td>扣掉 $i=j$ 的对和 $2(k-1)\tilde n$ 个重叠对中原本按独立算入的 $\mu^2$</td></tr>
-<tr><td>$+2\tilde n\delta\mu$</td><td>重叠对里因自重叠而真正能同时出现的部分</td></tr>
-</table>
-<p>论文称 $X_w(X_w-1)$ 的<b>方差</b>没有简单闭式(引 Ribeca &amp; Raineri 2008;Nuel 2010 的生成函数/自动机数值方法),因此不做标准差归一化。第 2 节说明:在 i.i.d. 下这个方差其实有精确闭式。</p>
+<p>即 B5 的 (B19);精确式是 (B18),两者之差 $(k^2-k)\mu^2-2\sum_dd\,\mu_d$ 不随 $\tilde n$ 增长。论文称 $X_w(X_w-1)$ 的<b>方差</b>没有简单闭式(引 Ribeca &amp; Raineri 2008;Nuel 2010 的生成函数/自动机数值方法),因此不做标准差归一化。第 2、3 节说明在 i.i.d. 下这个方差其实有精确闭式。</p>
 
 <h3>1.3 Poisson 近似:论文式 (6)</h3>
-<p>假设 $X_w \sim \text{Poisson}(\lambda = \tilde n\mu(w))$。Poisson 的方差等于均值,一阶项恰好抵消:</p>
 <div class="eq">$$
-\mathbf{E}[X_w(X_w-1)] = \mathbf{Var}[X_w] + (\mathbf{E}X_w)^2 - \mathbf{E}X_w
-= \tilde n\mu + [\tilde n\mu]^2 - \tilde n\mu = [\tilde n\,\mu(w)]^2 \tag{6}
+\mathbf{E}[X_w(X_w-1)] \approx [\tilde n\,\mu(w)]^2 \tag{6}
 $$</div>
-<p>(这正是 Poisson 的二阶阶乘矩 $\lambda^2$。)对照式 (5),它保留了 $\tilde n^2$ 主导项,丢掉了 $O(\tilde n)$ 的项 $-(2k-1)\tilde n\mu^2 + 2\tilde n\delta\mu$,其相对大小约为 $(\tilde n\mu)^{-1}$。</p>
-<div class="warn">
-<b>近似的合理性与边界。</b>$\tilde n$ 大、$k$ 较大时 $\mu$ 很小,单个词的出现是稀有事件。对非自重叠词($\delta=0$),出现事件近似独立,极限为 Poisson;对自重叠词,出现成簇,极限是复合 Poisson(簇的个数 Poisson,簇大小近似几何分布),此时式 (6) 会低估真实的 $\mathbf{E}[X(X-1)]$。论文的处理是:接受这一偏差,补充材料实验表明用式 (6) 和用精确式 (5) 的分类性能相当。
-</div>
+<p>即 B5 的 (B20):把 $X_w$ 当 Poisson 变量,只留 (5) 的 $\tilde n^2$ 项。B5.3 的弹窗表给了它的偏差:对不自重叠的词几乎精确;对自重叠且期望计数 $\lambda=\tilde n\mu$ 不大的词偏低 $2\delta/\lambda$。论文的处理是接受这一偏差,补充材料实验表明用式 (6) 和用精确式的分类性能相当。</p>
 
 <h3>1.4 论文最终采用的统计量:式 (7)</h3>
 <div class="eq">$$
@@ -103,7 +75,7 @@ $$</div>
 <li><b>k-mer 计数向量的范数</b>(欧氏距离思路):能区分,但不如式 (2)。</li>
 </ul>
 
-<h2>2. $\mathbf{Var}[X_w(X_w-1)]$ 的精确闭式</h2>
+<h2>2. $\mathbf{Var}[X_w(X_w-1)]$ 的精确闭式:显式有限和</h2>
 <div class="note">
 <b>先说记号:下降阶乘与阶乘矩。</b><br>
 $(X)_m$ 读作"$X$ 的 $m$ 阶下降阶乘",定义是从 $X$ 开始连乘 $m$ 项、每项减 1:
@@ -115,48 +87,35 @@ $$(X)_m = X(X-1)(X-2)\cdots(X-m+1).$$
 <tr><td>$(X)_3$</td><td>$X(X-1)(X-2)$</td><td>有序三个的挑法数</td></tr>
 <tr><td>$(X)_4$</td><td>$X(X-1)(X-2)(X-3)$</td><td>有序四个的挑法数</td></tr>
 </table>
-它们的期望 $\mathbf E(X)_m$ 叫<b>阶乘矩</b>。用它而不用普通矩 $\mathbf E[X^m]$,有两个原因:(1) $\mathbf E(X)_m$ 等于"任取 $m$ 个不同位置、它们同时都是 $w$"的概率对全部有序位置组求和,这个和可以沿相邻间距拆开来算(第二步会看到),普通矩没有这个性质;(2) Poisson 分布的阶乘矩恰好是 $\lambda^m$,论文的近似式 (6) 就是这么来的。
+它们的期望 $\mathbf E(X)_m$ 叫<b>阶乘矩</b>。用它而不用普通矩 $\mathbf E[X^m]$,有两个原因:(1) $\mathbf E(X)_m$ 等于"任取 $m$ 个不同位置、它们同时都是 $w$"的概率对全部有序位置组求和,这个和可以沿相邻间距拆开来算(B6.1),普通矩没有这个性质;(2) Poisson 分布的阶乘矩恰好是 $\lambda^m$,论文的近似式 (6) 就是这么来的。
 </div>
-<div style="margin:1em 0"><b>第一步:化成阶乘矩。</b>要算 $X(X-1)$ 的方差就要算 $\mathbf E[(X(X-1))^2]$,而 $(X(X-1))^2=(X)_2^2$ 可以拆成阶乘矩的组合:$(X)_2^2 = (X)_4 + 4(X)_3 + 2(X)_2$。
+<div style="margin:1em 0"><b>从 B6 出发。</b>要算 $X(X-1)$ 的方差就要算 $\mathbf E[(X(X-1))^2]$,而 $(X(X-1))^2=(X)_2^2$ 可以拆成阶乘矩的组合:$(X)_2^2 = (X)_4 + 4(X)_3 + 2(X)_2$。
 <span class="pop">(悬停验算)<span class="popbox">
 <h4>取 $X=3$ 验算</h4>
 左边:$(3)_2=3\times2=6$,平方得 36。<br>
 右边:$(3)_4=3\cdot2\cdot1\cdot0=0$;$4(3)_3=4\times6=24$;$2(3)_2=2\times6=12$;合计 $0+24+12=36$。<br>
 再取 $X=4$:左边 $12^2=144$;右边 $24+4\cdot24+2\cdot12=24+96+24=144$。
 </span></span>
-于是</div>
+于是 (B26):</div>
 <div class="eq">$$
 \mathbf{Var}[X_w(X_w-1)] = \mathbf{E}(X_w)_4 + 4\,\mathbf{E}(X_w)_3 + 2\,\mathbf{E}(X_w)_2 - \big[\mathbf{E}(X_w)_2\big]^2
 $$</div>
-<p>所以只需 $X_w$ 的前四阶阶乘矩。</p>
-
-<p><b>第二步:阶乘矩 = 位置子集上的联合出现概率。</b>$\mathbf{E}(X)_m = m!\sum_{|S|=m} P(S)$,$P(S)$ 是 $w$ 在 $S$ 中每个位置都出现的概率。对排好序的 $S=\{s_1\lt\cdots\lt s_m\}$,令间距 $d_r = s_{r+1}-s_r$。由 A2 同样的推理(连续重叠副本只需两两相邻一致),联合概率沿间距<b>因子化</b>:</p>
+<p>四个阶乘矩由 B6 的生成函数 (B25) 给出,其中 $A(z)=\sum_{d=1}^{k-1}g(d)z^d$ 是重叠间距多项式,$W(z)=A(z)+\mu z^k/(1-z)$:</p>
 <div class="eq">$$
-P(S) = \mu(w)\prod_{r=1}^{m-1} g(d_r), \qquad
-g(d) = \begin{cases} g(d) := \varepsilon_{k-d}(w)\displaystyle\prod_{j=k-d+1}^{k} p_{w_j}, & 1\le d\le k-1 \\[6pt] \mu(w), & d\ge k \end{cases}
+\mathbf{E}(X_w)_m = m!\,\mu(w)\;[z^{\tilde n-1}]\;\frac{W(z)^{m-1}}{(1-z)^2}
 $$</div>
-<p>注意 $\sum_{d=1}^{k-1} g(d) = \delta(w)$,即 overlapping coefficient 正是重叠权重 $g(d)$ 的总和。</p>
-
-<p><b>第三步:生成函数把位置求和变成系数提取。</b>令 $A(z)=\sum_{d=1}^{k-1} g(d)z^d$(重叠多项式),$W(z) = A(z) + \mu\,\dfrac{z^k}{1-z}$。间距为 $(d_1,\dots,d_{m-1})$ 的子集有 $\tilde n - \sum d_r$ 个起点,于是</p>
+<p><b>展成有限和。</b>把 $W^{m-1}=\big(A+\mu z^k/(1-z)\big)^{m-1}$ 二项展开,$j$ 是"非重叠间距"的个数;记 $A(z)^r=\sum_t\alpha_{r,t}z^t$,$\alpha_{r,t}$ 是 $r$ 个重叠间距之和为 $t$ 的总权重。$z^{jk}/(1-z)^{j+2}$ 里 $z^{\tilde n-1-t}$ 的系数是 $\binom{\tilde n-1-t-jk+j+1}{j+1}$,于是</p>
 <div class="eq">$$
-\boxed{\;\mathbf{E}(X_w)_m = m!\,\mu(w)\;[z^{\tilde n-1}]\;\frac{W(z)^{m-1}}{(1-z)^2}\;}
+\boxed{\;\mathbf{E}(X_w)_m = m!\,\mu\sum_{j=0}^{m-1}\binom{m-1}{j}\mu^j \sum_t \alpha_{m-1-j,\,t}\,\binom{\tilde n - t - j(k-1)}{j+1}\;}
 $$</div>
-<p>$W^{m-1}/(1-z)^2$ 是只在 $z=1$ 有极点的有理函数,所以系数是 $\tilde n$ 的多项式。二项展开 $W^{m-1}$,记 $A(z)^r = \sum_t \alpha_{r,t}z^t$,得到有限和形式:</p>
-<div class="eq">$$
-\mathbf{E}(X_w)_m = m!\,\mu\sum_{j=0}^{m-1}\binom{m-1}{j}\mu^j \sum_t \alpha_{m-1-j,\,t}\,\binom{\tilde n - t - j(k-1)}{j+1}
-$$</div>
-<p>其中 $j$ 是"非重叠间距"的个数,$\alpha_{r,t}$ 是 $r$ 个重叠间距之和为 $t$ 的总权重。$m=2$ 时它给出精确的</p>
-<div class="eq">$$
-\mathbf{E}[X_w(X_w-1)] = \mu^2(\tilde n-k+1)(\tilde n-k) + 2\mu\sum_{d=1}^{k-1}(\tilde n-d)\,g(d)
-$$</div>
-<p>与 1.1 节的精确式一致;论文式 (5) 是它在 $\tilde n\gg k$ 下丢掉 $k(k-1)\mu^2$ 和 $2\mu\sum d\,g(d)$ 后的形式。</p>
+<p>$m=2$ 时它给出 $\mu^2(\tilde n-k+1)(\tilde n-k)+2\mu\sum_{d=1}^{k-1}(\tilde n-d)\,g(d)$,就是 B5 的精确式 (B18)。$m=3,4$ 用同一个公式,给定词后 $O(k)$ 时间可算(全部 $\alpha_{r,t}$ 由 $A(z)$ 自乘得到)。</p>
 
 <div class="note">
-<b>结论。</b>$\mathbf{Var}[X_w(X_w-1)]$ 是 $\tilde n$ 的四次多项式(首项 $\tilde n^4\mu^4$ 相消,实际 $O(\tilde n^3)$),系数由 $\mu$、$k$ 和重叠多项式 $A(z)$ 在 $z=1$ 处的前三阶导数决定,后者只依赖 $\delta_q := \sum_d d^q g(d)$,$q=0,1,2,3$($\delta_0=\delta$)。给定词后 $O(k)$ 时间可算。所以"没有闭式"不准确,准确的说法是:闭式存在但展开后有几十项,论文选择直接不用它。
+<b>结论。</b>$\mathbf{Var}[X_w(X_w-1)]$ 是 $\tilde n$ 的四次多项式(首项 $\tilde n^4\mu^4$ 相消,实际 $O(\tilde n^3)$),系数由 $\mu$、$k$ 和重叠多项式 $A(z)$ 在 $z=1$ 处的前三阶导数决定,后者只依赖 $\delta_q := \sum_d d^q g(d)$,$q=0,1,2,3$($\delta_0=\delta$)。所以"没有闭式"不准确,准确的说法是:闭式存在但展开后有几十项,论文选择直接不用它。第 3 节把它列全。
 </div>
 
 <h2>3. 完全展开</h2>
-<p>记 $\delta_q = \sum_{d=1}^{k-1} d^q\,g(d)$($\delta_0=\delta(w)$)。把 第 2 节的有限和逐项展开,需要 $r$ 个重叠间距之和的矩 $\sum_t \alpha_{r,t}t^q$,它们是 $\delta_q$ 的多项式:
+<p>记 $\delta_q = \sum_{d=1}^{k-1} d^q\,g(d)$($\delta_0=\delta(w)$)。把第 2 节的有限和逐项展开,需要 $r$ 个重叠间距之和的矩 $\sum_t \alpha_{r,t}t^q$,它们是 $\delta_q$ 的多项式:
 $\sum_t\alpha_{r,t} = \delta_0^r$,
 $\sum_t\alpha_{r,t}t = r\delta_0^{r-1}\delta_1$,
 $\sum_t\alpha_{r,t}t^2 = r\delta_0^{r-1}\delta_2 + r(r-1)\delta_0^{r-2}\delta_1^2$,
@@ -177,7 +136,7 @@ $\sum_t\alpha_{r,t}t^3 = r\delta_0^{r-1}\delta_3 + 3r(r-1)\delta_0^{r-2}\delta_1
 (1) 展开式在 13 个词(含 aa、aaa、aaaa、acac、acacac、aacaa、gtacgt 等各种自重叠结构与不可自重叠词)× 每词 19 个 $n$ 值(从 $n=4k-4$ 起连续 16 个,加 200、5000、123457)共 247 个点上,与第 2 节的精确闭式做<b>有理数严格相等</b>比较,全部通过;而第 2 节的闭式又已与 $4^n$ 穷举严格相等。
 (2) $c_3 = 4\mu^3(1+\mu+2\delta_0-2k\mu)$ 与 delta 方法独立推出的首项 $4\mu^3[1-\mu+2\delta-2(k-1)\mu]$ 恒等。
 (3) 令 $\delta_q\equiv0$,$\mathbf{E}(X)_3$ 退化为 $6\mu^3\binom{\tilde n-2(k-1)}{3}$,与不可自重叠特例一致。
-<b>适用范围:</b>多项式形式对 $\tilde n\ge 3(k-1)$(即 $n\ge 4k-4$)精确;更短的序列里部分二项式系数应为 0 而多项式不为 0,此时用第 2 节的二项式形式。脚本 <code>var_expand.py</code>。
+<b>适用范围:</b>多项式形式对 $\tilde n\ge 3(k-1)$(即 $n\ge 4k-4$)精确;更短的序列里部分二项式系数应为 0 而多项式不为 0,此时用第 2 节的有限和形式(二项式系数在上小于下时取 0)。脚本 <code>var_expand.py</code>。
 </div>
 
 <p><b>特例:不能自重叠的词</b>($A\equiv 0$,$\delta=0$)。只剩 $j=m-1$ 一项,极其简洁:</p>
@@ -208,7 +167,7 @@ $D_2^R$ 的典型工作区(read 长几百 bp,$k=7\sim 8$)恰恰是 $\tilde n\mu\
 <p><b>验证。</b>脚本 <code>var_check.py</code>(同目录)用有理数运算实现上述闭式,与 $n\le 10$ 时穷举全部 $4^n$ 条序列得到的精确方差逐一比较,六个词(含 <span class="mono">aaa</span>、<span class="mono">acac</span>、<span class="mono">gtacgt</span> 等不同自重叠结构)全部严格相等;不可自重叠特例公式与一般公式也严格相等。</p>
 
 <h2>接下来</h2>
-<p>本页全部是 i.i.d.。D 页把第 2 节的生成函数推导原样搬到 $m$ 阶 Markov 链:重叠部分的权重换成条件概率,非重叠部分多出一项几何衰减的记忆相关。</p>
+<p>本页全部是 i.i.d.,是 B6 的补充。D 页把 (B25) 的生成函数推导搬到 $m$ 阶 Markov 链:重叠间距的 $g(d)$ 换成沿链的转移概率之积,非重叠间距的 $g(d)$ 不再是常数 $\mu$,而是按转移矩阵的幂几何衰减到 $\mu$。E 页用到本页的式 (7) 和 1.5 节。</p>
 
 </body>
 </html>
