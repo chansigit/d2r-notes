@@ -8,7 +8,9 @@
 
 - `index.html` — 总目录
 - `d2r_history.html` — A. overlapping coefficient 是怎么想出来的
-- `d2r_theory.html` — B. i.i.d. 背景下的词计数理论
-- `d2r_markov.html` — C. 方差的精确闭式与 Markov 背景推广
+- `d2r_theory.html` — B. i.i.d. 背景下的词计数理论(B0–B7)
+- `d2r_iid_variance.html` — C. D2R 论文的 i.i.d. 处理与 Var[X(X−1)] 的精确闭式
+- `d2r_markov.html` — D. Markov 背景下的词计数理论(重写中)
+- `d2r_discussion.html` — 题外话:统计量形式的讨论稿
 
 纯静态 HTML,公式由 MathJax(CDN)渲染。直接用浏览器打开 `index.html` 即可。

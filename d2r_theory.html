@@ -2,19 +2,28 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<title>D2R 核心理论总结</title>
+<title>B. i.i.d. 背景下的词计数理论</title>
 <script>
 MathJax = { tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$']], tags: 'ams' } };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 <style>
-body { max-width: 860px; margin: 40px auto; padding: 0 20px; font: 16px/1.7 -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif; color: #222; }
+body { max-width: 860px; margin: 40px auto; padding: 0 20px; font: 16px/1.8 -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif; color: #222; }
 h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 6px; }
 h2 { font-size: 1.25em; margin-top: 2em; color: #1a4d8f; }
 h3 { font-size: 1.05em; margin-top: 1.5em; }
 .eq { margin: 0.8em 0; }
 .note { background: #f4f6fa; border-left: 4px solid #1a4d8f; padding: 10px 16px; margin: 1em 0; }
 .warn { background: #fdf6e3; border-left: 4px solid #b58900; padding: 10px 16px; margin: 1em 0; }
+.story { background: #f7f7f7; padding: 10px 16px; margin: 1em 0; border-radius: 4px; }
+.pop { position: relative; border-bottom: 1px dotted #1a4d8f; cursor: help; color: #1a4d8f; }
+.pop .popbox { visibility: hidden; opacity: 0; transition: opacity .15s; position: absolute; left: 0; top: 1.6em; z-index: 10;
+  width: 520px; max-width: 90vw; background: #fff; border: 1px solid #999; box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  padding: 12px 16px; font-size: 0.93em; line-height: 1.6; color: #222; text-align: left; border-radius: 4px; }
+.pop:hover .popbox { visibility: visible; opacity: 1; }
+.popbox h4 { margin: 0 0 4px; font-size: 1em; color: #1a4d8f; }
+.popbox .eq { margin: 4px 0; }
+.popbox hr { border: 0; border-top: 1px solid #ddd; margin: 8px 0; }
 code { background: #eee; padding: 1px 5px; border-radius: 3px; font-size: 0.92em; }
 table { border-collapse: collapse; margin: 1em 0; }
 td, th { border: 1px solid #ccc; padding: 6px 12px; text-align: left; vertical-align: top; }
@@ -24,165 +33,501 @@ td, th { border: 1px solid #ccc; padding: 6px 12px; text-align: left; vertical-a
 </head>
 <body>
 
-<h1>D2R:检测重复序列的新统计量 — 论文理论</h1>
-<p class="ref"><a href="index.html">词计数的统计学:从一枚硬币到 Markov 链</a> ▸ <a href="d2r_history.html">A. 来历</a> · 本页 B · <a href="d2r_markov.html">C. 方差闭式与 Markov</a></p>
+<h1>B. i.i.d. 背景下的词计数理论</h1>
+<p class="ref"><a href="index.html">词计数的统计学:从一枚硬币到 Markov 链</a> ▸ <a href="d2r_history.html">A. 来历</a> · 本页 B · <a href="d2r_iid_variance.html">C. 论文处理与方差闭式</a> · <a href="d2r_markov.html">D. Markov</a></p>
 
-<p class="ref">Chen S, Chen Y, Sun F, Waterman MS, Zhang X. <i>A new statistic for efficient detection of repetitive sequences.</i> Bioinformatics 35(22):4596–4606, 2019.
-<a href="https://doi.org/10.1093/bioinformatics/btz262">doi:10.1093/bioinformatics/btz262</a></p>
+<h2>引子:把 A 页的直觉变成可以推导的东西</h2>
+<p>A 页用硬币讲清了一件事:一个词能不能和自己重叠,决定了它的计数波动多大、首次出现等多久。但 A 页只给了结论和例子,没有推导。本页在最简单的概率模型下把整条链推一遍:词出现的概率是多少,计数的均值是多少,方差是多少,更高阶的矩是多少,最后计数本身服从什么分布。每一步都尽量写出<b>精确</b>的式子,再讨论常用的近似在什么范围内可用。</p>
+<p>所谓最简单的模型,就是 A 页末尾说的 <b>i.i.d.</b>:序列里每个字母独立地、按同一组概率抛出来。硬币是它的特例。Markov 链留到 D 页。</p>
 
-<h2>1. 从两条序列的相似性到单条序列的重复性</h2>
-<p>D2 统计量是两条序列 k-mer 计数向量的内积,即 k-mer 匹配数:</p>
-<div class="eq">$$ D_2 = \sum_{w \in \mathcal{A}^k} X_w Y_w \tag{1} $$</div>
-<p>搬到单条序列:词 $w$ 出现 $X_w$ 次,则它内部的自匹配数为</p>
-<div class="eq">$$ M(w) = \binom{X_w}{2} = \frac{X_w(X_w-1)}{2} $$</div>
-<p>所有 k-mer 的自匹配总数反映重复程度,且不区分串联重复与散布重复。</p>
-
-<h2>2. D2R 的定义</h2>
-<p>自匹配数减去背景期望,再用 $\tilde n$ 个 k-mer 能形成的最大匹配数 $\binom{\tilde n}{2}$ 归一化:</p>
-<div class="eq">$$
-D_2^R = \frac{\sum_w \{ M(w) - \mathbf{E}[M(w)] \}}{\binom{\tilde n}{2}}
-      = \frac{\sum_w \{ X_w(X_w-1) - \mathbf{E}[X_w(X_w-1)] \}}{\tilde n(\tilde n-1)},
-\qquad \tilde n = n-k+1 \tag{2}
-$$</div>
+<h2>B0. 记号</h2>
+<p>整页只用下面这些记号,后面遇到时会再提醒。</p>
+<table>
+<tr><th>记号</th><th>含义</th><th>说明</th></tr>
+<tr><td>$\mathcal A=\{a,c,g,t\}$</td><td>字母表</td><td>四种碱基。硬币是 $\{H,T\}$。</td></tr>
+<tr><td>$p_a,p_c,p_g,p_t$</td><td>每种字母的概率</td><td>加起来等于 1。i.i.d. 模型的全部参数就是这四个数。</td></tr>
+<tr><td>$A_1A_2\cdots A_n$</td><td>随机序列</td><td>长度 $n$;每个 $A_i$ 独立地按 $(p_a,\dots,p_t)$ 抽取。</td></tr>
+<tr><td>$w=w_1w_2\cdots w_k$</td><td>要数的词</td><td>长度 $k$,固定不变;$w_j$ 是它的第 $j$ 个字母。</td></tr>
+<tr><td>$\tilde n=n-k+1$</td><td>能放下 $w$ 的起始位置数</td><td>位置 $1$ 到 $n-k+1$。位置 $i$ 处的 $w$ 占据 $A_i,\dots,A_{i+k-1}$。</td></tr>
+<tr><td>$\mathbb I_i$</td><td>位置 $i$ 的指示变量</td><td>$A_iA_{i+1}\cdots A_{i+k-1}=w$ 时取 1,否则取 0。$i=1,\dots,\tilde n$。</td></tr>
+<tr><td>$X_w=\sum_{i=1}^{\tilde n}\mathbb I_i$</td><td>$w$ 的计数</td><td>允许重叠地数。这是全页的主角。</td></tr>
+<tr><td>$\mu(w)$</td><td>任一位置恰好是 $w$ 的概率</td><td>B1 给出。</td></tr>
+<tr><td>$\mu_d(w)$</td><td>相距 $d$ 的两个位置同时是 $w$ 的概率</td><td>B3 给出。</td></tr>
+<tr><td>$T_w$</td><td>首次出现的等待时间</td><td>$w$ 第一次完整出现时已抛出的字母数。B4。</td></tr>
+<tr><td>$a(w)$</td><td>簇的延续概率</td><td>一次出现之后还有重叠出现的概率。B4。</td></tr>
+<tr><td>$g(d)$</td><td>已知位置 $i$ 是 $w$,位置 $i+d$ 也是 $w$ 的条件概率</td><td>$=\mu_d/\mu$。B6。</td></tr>
+<tr><td>$W_i$</td><td>起点 $i$ 处的窗口 $A_i\cdots A_{i+k-1}$</td><td>B7。</td></tr>
+<tr><td>$N=\sum_wX_w(X_w-1)$</td><td>窗口相同的有序位置对数</td><td>B7;统计量的分子。</td></tr>
+<tr><td>$S(m)=\sum_ap_a^m$、$c=S(2)$</td><td>$m$ 个独立字母全相同的概率;两个字母相同的概率</td><td>B7。</td></tr>
+<tr><td>$\varepsilon_u(w)$、$\delta(w)$</td><td>border 指示、overlapping coefficient</td><td>A2 已定义,B3 会再复述一次。</td></tr>
+</table>
 <div class="note">
-$X_w \ge 2$ 的词贡献正值并被平方放大;只出现一次的词贡献 $-\mathbf{E}[\cdot]$ 的小负值;不出现的词贡献同样的小负值。
-若期望取精确值,则零模型下 $\mathbf{E}[D_2^R]=0$;有重复时 $D_2^R$ 显著偏正。
+<b>为什么是 $\tilde n$ 而不是 $n$。</b>长度 $k$ 的词最后一个可能的起点是 $n-k+1$,再往后放不下。比如 $n=10$、$k=4$,起点只有 $1,\dots,7$ 共 7 个。$\tilde n$ 就是"试验次数"。
 </div>
 
-<h2>3. i.i.d. 背景模型下的推导</h2>
-
-<h3>3.1 设定</h3>
-<p>序列 $A_1 A_2 \cdots A_n$,每个字母独立同分布,$\Pr[A_i = a] = p_a$,$a\in\{a,c,g,t\}$。
-固定词 $w = w_1 w_2 \cdots w_k$,定义位置指示变量</p>
-<div class="eq">$$ \mathbb{I}_i(w) = \mathbf{1}\{ A_i A_{i+1}\cdots A_{i+k-1} = w \}, \qquad i = 1,\dots,\tilde n $$</div>
-<p>由独立性,词出现概率是字母概率之积:</p>
-<div class="eq">$$ \mu(w) = \Pr[\mathbb{I}_i(w)=1] = \prod_{j=1}^{k} p_{w_j} \tag{3} $$</div>
-<p>词计数 $X_w = \sum_{i=1}^{\tilde n} \mathbb{I}_i(w)$ 是 $\tilde n$ 个<b>同分布但不独立</b>的 Bernoulli 变量之和。不独立的原因:相距不到 $k$ 的两个位置共享字母。</p>
-
-<h3>3.2 均值</h3>
-<div class="eq">$$ \mathbf{E}[X_w] = \sum_{i=1}^{\tilde n} \mathbf{E}[\mathbb{I}_i(w)] = \tilde n\,\mu(w) $$</div>
-
-<h3>3.3 方差:分解为对角项与协方差项</h3>
+<h2>B1. 词频:一个位置恰好是 $w$ 的概率</h2>
+<p>固定一个起点 $i$。事件"$\mathbb I_i=1$"要求 $k$ 个字母同时对上:$A_i=w_1$,$A_{i+1}=w_2$,……,$A_{i+k-1}=w_k$。这 $k$ 个字母在 i.i.d. 下是独立抽的,所以联合概率是各自概率的乘积:</p>
 <div class="eq">$$
-\mathbf{Var}[X_w] = \sum_{i} \mathbf{Var}[\mathbb{I}_i] + 2\sum_{i&lt;j} \mathbf{Cov}[\mathbb{I}_i, \mathbb{I}_j]
-= \tilde n\,\mu(1-\mu) + 2\sum_{d=1}^{\tilde n-1} \sum_{j-i=d} \mathbf{Cov}[\mathbb{I}_i, \mathbb{I}_{i+d}]
+\mu(w)=\Pr[\mathbb I_i=1]=\Pr[A_i=w_1]\Pr[A_{i+1}=w_2]\cdots\Pr[A_{i+k-1}=w_k]=\prod_{j=1}^{k}p_{w_j} \tag{B1}
 $$</div>
-<p>按间距 $d = j-i$ 分三种情况:</p>
-<table>
-<tr><th>间距</th><th>两个窗口的关系</th><th>$\mathbf{E}[\mathbb{I}_i \mathbb{I}_{i+d}]$</th><th>协方差</th></tr>
-<tr><td>$d \ge k$</td><td>不重叠,字母集合无交,独立</td><td>$\mu^2$</td><td>$0$</td></tr>
-<tr><td>$1 \le d \le k-1$</td><td>重叠 $k-d$ 个字母</td><td>见 3.4</td><td>$\ne 0$</td></tr>
-</table>
-<p>所以只有 $d=1,\dots,k-1$ 这 $k-1$ 种间距有贡献,问题归结为计算重叠情形下的联合概率。</p>
-
-<h3>3.4 重叠情形与 overlapping coefficient $\delta(w)$</h3>
-<p>设 $w$ 同时出现在位置 $i$ 和 $i+d$($1\le d\le k-1$)。两个窗口共享序列位置 $i+d, \dots, i+k-1$,共 $k-d$ 个字母。这些字母在第一个副本中是 $w$ 的<b>后 $k-d$ 个字母</b>(后缀),在第二个副本中是 $w$ 的<b>前 $k-d$ 个字母</b>(前缀)。两个副本同时成立要求二者相同:</p>
-<div class="eq">$$ w_{d+1} w_{d+2} \cdots w_k \;=\; w_1 w_2 \cdots w_{k-d} $$</div>
-<p>定义重叠指示 $\varepsilon_u(w) = 1$ 当且仅当 $w$ 的 $u$ 长前缀等于 $u$ 长后缀。上式即 $\varepsilon_{k-d}(w)=1$。</p>
-<p>若条件满足,事件"两处都是 $w$"等价于"位置 $i$ 起的 $k+d$ 个字母恰为 $w$ 接上 $w$ 的后 $d$ 个字母",概率为</p>
-<div class="eq">$$
-\mathbf{E}[\mathbb{I}_i \mathbb{I}_{i+d}] = \varepsilon_{k-d}(w)\; \mu(w) \prod_{j=k-d+1}^{k} p_{w_j}
-$$</div>
-<p>把 $k-1$ 种间距的"额外字母概率"加起来,就得到论文中的 overlapping coefficient:</p>
-<div class="eq">$$
-\boxed{\;\delta(w) = \sum_{d=1}^{k-1} \varepsilon_{k-d}(w) \prod_{j=k-d+1}^{k} p_{w_j}\;}
-$$</div>
-<p>(论文写作 $\mu(w_j)$,即单字母概率 $p_{w_j}$。)按 $u=k-d$ 重新索引,等价地</p>
-<div class="eq">$$ \delta(w) = \sum_{u=1}^{k-1} \varepsilon_u(w)\, \frac{\mu(w)}{\mu(w_1\cdots w_u)} $$</div>
-<p>即对每个"自重叠长度" $u$,加上"给定已有一个 $w$,紧接着错位 $k-u$ 再出一个 $w$ 需额外付出的概率"。</p>
+<div>它与 $i$ 无关:序列里每个位置"长得一样"(这叫平稳性),所以每个 $\mathbb I_i$ 都是同一个 Bernoulli 变量,成功概率 $\mu(w)$。
+<span class="pop">(悬停看一个数值例子)
+<span class="popbox">
+<h4>例:$w=$ <span class="mono">acgt</span>,$p_a=p_t=0.3$,$p_c=p_g=0.2$</h4>
+$\mu(\text{acgt})=p_a\,p_c\,p_g\,p_t=0.3\times0.2\times0.2\times0.3=0.0036$。<br>
+换成 <span class="mono">aaaa</span>:$\mu=0.3^4=0.0081$。换成 <span class="mono">gtacgt</span>:$\mu=0.2\cdot0.3\cdot0.3\cdot0.2\cdot0.2\cdot0.3=0.000216$。<br>
+均匀硬币下任何长度 $k$ 的词 $\mu=(1/2)^k$;等概率碱基下 $\mu=(1/4)^k$,与词的内容无关。
+</span></span></div>
 
 <div class="note">
-<b>$\delta(w)$ 的含义:</b>一个 $w$ 出现后,它"拖带"出下一个重叠出现的期望次数。$\delta(w)=0$ 表示 $w$ 无法与自身重叠,出现事件近似独立;$\delta(w)$ 大表示 $w$ 倾向于成簇(clump)出现,方差被抬高。
+<b>$\mu(w)$ 是什么。</b>它是一个概率,介于 0 和 1 之间,无量纲。它只取决于 $w$ 用了哪些字母、各用几次,<b>与字母的排列顺序无关</b>:acgt、tgca、aacc……只要字母的多重集相同,$\mu$ 就相同。这一点在后面很重要:A 页说的"概率相同、波动不同",相同的就是这个 $\mu$,不同的来自排列顺序决定的重叠结构。
 </div>
 
-<p><b>例子</b>(记 $p_a,p_c,p_g,p_t$):</p>
-<table>
-<tr><th>词 $w$</th><th>哪些 $u$ 满足 $\varepsilon_u=1$</th><th>$\delta(w)$</th></tr>
-<tr><td class="mono">acgt</td><td>无(a≠t,ac≠gt,acg≠cgt)</td><td>$0$</td></tr>
-<tr><td class="mono">gtacgt</td><td>$u=2$:前缀 gt = 后缀 gt(对应 $d=4$)</td><td>$p_a p_c p_g p_t$</td></tr>
-<tr><td class="mono">aaaa</td><td>$u=1,2,3$ 全部</td><td>$p_a + p_a^2 + p_a^3$</td></tr>
-<tr><td class="mono">acac</td><td>$u=2$:ac = ac(对应 $d=2$)</td><td>$p_a p_c$</td></tr>
-</table>
-<p>例:<span class="mono">gtacgt</span> 在 $d=4$ 处自重叠意味着序列中出现 <span class="mono">gtacgtacgt</span>(长 $k+d=10$),在第一个 $w$ 的基础上多付出 <span class="mono">acgt</span> 四个字母的概率。</p>
+<h2>B2. 均值:$\tilde n\,\mu(w)$,而且与重叠无关</h2>
+<p>计数是指示变量之和。期望的线性性说,和的期望等于期望的和,<b>不要求各项独立</b>:</p>
+<div class="eq">$$
+\mathbf E[X_w]=\mathbf E\Big[\sum_{i=1}^{\tilde n}\mathbb I_i\Big]=\sum_{i=1}^{\tilde n}\mathbf E[\mathbb I_i]=\sum_{i=1}^{\tilde n}\Pr[\mathbb I_i=1]=\tilde n\,\mu(w) \tag{B2}
+$$</div>
+<p>这一步完全没有用到 $\mathbb I_i$ 之间是否独立。相邻位置的 $\mathbb I_i$ 共享字母、显然不独立,但均值照样是 $\tilde n\mu$。<b>所以 A 页里 HH 和 HT 的期望计数相同,不是巧合,而是因为均值根本看不见重叠。</b>重叠要到方差才第一次露面。</p>
+<div>
+<span class="pop">(悬停看硬币的例子)
+<span class="popbox">
+<h4>均匀硬币,抛 $n=5$ 次,数 <span class="mono">HH</span></h4>
+$k=2$,$\tilde n=4$,$\mu=1/4$,所以 $\mathbf E[X]=4\times\tfrac14=1$。<br>
+直接验算:5 次抛掷共 32 种等可能结果。<span class="mono">HH</span> 可能出现在起点 1、2、3、4;每个起点上出现的结果各有 $2^3=8$ 种;把四个起点的 8 种全加起来是 32 次出现,除以 32 种结果,平均每种结果 1 次。注意这里同一个结果被数了多次(比如 <span class="mono">HHHHH</span> 贡献 4 次),但期望的线性性恰好允许这样加。<br>
+换成 <span class="mono">HT</span>:同样 $\mathbf E[X]=1$。两者均值相同。
+</span></span></div>
 
-<h3>3.5 代回方差</h3>
-<p>间距为 $d$ 的位置对共有 $\tilde n - d$ 对。精确地:</p>
-<div class="eq">$$
-\mathbf{Var}[X_w] = \tilde n\,\mu(1-\mu) + 2\sum_{d=1}^{k-1} (\tilde n - d)\Big[\varepsilon_{k-d}(w)\,\mu \prod_{j=k-d+1}^{k} p_{w_j} - \mu^2\Big]
-$$</div>
-<p>当 $\tilde n \gg k$ 时用 $\tilde n$ 代替 $\tilde n - d$(忽略边界效应),协方差项整理为 $2\tilde n\,\mu\,[\delta(w) - (k-1)\mu]$,即论文式 (4)(Waterman 1995):</p>
-<div class="eq">$$
-\begin{aligned}
-\mathbf{E}[X_w] &= \tilde n\,\mu(w) \\
-\mathbf{Var}[X_w] &= \tilde n\,\mu(w)[1-\mu(w)] + 2\tilde n\,\mu(w)\big[\delta(w) - (k-1)\mu(w)\big]
-\end{aligned} \tag{4}
-$$</div>
-<div class="note">
-<b>两个方向的修正。</b>相对于把 $X_w$ 当二项分布的朴素方差 $\tilde n\mu(1-\mu)$:
-<ul>
-<li>$-2\tilde n(k-1)\mu^2$:$k-1$ 种重叠间距下,若不能自重叠,两处同时出现是不可能的(概率 0 而非 $\mu^2$),所以负相关,方差<b>降低</b>。非自重叠词是欠离散的。</li>
-<li>$+2\tilde n\mu\delta(w)$:能自重叠的词在这些间距下同时出现的概率远高于 $\mu^2$,正相关,方差<b>升高</b>。像 <span class="mono">aaaa</span> 这样的词高度成簇。</li>
-</ul>
-</div>
-
-<h3>3.6 二阶阶乘矩 $\mathbf{E}[X_w(X_w-1)]$</h3>
-<p>这是 $D_2^R$ 真正需要的量。由 $\mathbf{E}[X(X-1)] = \mathbf{Var}[X] + (\mathbf{E}X)^2 - \mathbf{E}X$ 代入式 (4):</p>
-<div class="eq">$$
-\begin{aligned}
-\mathbf{E}[X_w(X_w-1)]
-&= \tilde n\mu(1-\mu) + 2\tilde n\mu[\delta - (k-1)\mu] + \tilde n^2\mu^2 - \tilde n\mu \\
-&= \tilde n^2\mu^2 - \tilde n\mu^2 - 2(k-1)\tilde n\mu^2 + 2\tilde n\delta\mu \\
-&= (\tilde n^2 - 2k\tilde n + \tilde n)\,\mu(w)^2 + 2\tilde n\,\delta(w)\,\mu(w)
-\end{aligned} \tag{5}
-$$</div>
-<p>也可以直接算:$\mathbf{E}[X(X-1)] = \sum_{i\ne j}\mathbf{E}[\mathbb{I}_i\mathbb{I}_j]$ 就是"有序位置对同时为 $w$"的期望数,非重叠对贡献 $\mu^2$,重叠对贡献 $\delta$ 相关项,与式 (5) 一致。</p>
-<p>直观上,式 (5) 的三块分别是:</p>
-<table>
-<tr><td>$\tilde n^2\mu^2$</td><td>把所有位置对当独立时的匹配期望,主导项</td></tr>
-<tr><td>$-(2k-1)\tilde n\mu^2$</td><td>扣掉 $i=j$ 的对和 $2(k-1)\tilde n$ 个重叠对中原本按独立算入的 $\mu^2$</td></tr>
-<tr><td>$+2\tilde n\delta\mu$</td><td>重叠对里因自重叠而真正能同时出现的部分</td></tr>
-</table>
-<p>论文称 $X_w(X_w-1)$ 的<b>方差</b>没有简单闭式(引 Ribeca &amp; Raineri 2008;Nuel 2010 的生成函数/自动机数值方法),因此不做标准差归一化。实际上在 i.i.d. 下这个方差有精确闭式,并可推广到 Markov 背景,见 <a href="d2r_markov.html">第二页</a>。</p>
-
-<h3>3.7 Poisson 近似</h3>
-<p>假设 $X_w \sim \text{Poisson}(\lambda = \tilde n\mu(w))$。Poisson 的方差等于均值,一阶项恰好抵消:</p>
-<div class="eq">$$
-\mathbf{E}[X_w(X_w-1)] = \mathbf{Var}[X_w] + (\mathbf{E}X_w)^2 - \mathbf{E}X_w
-= \tilde n\mu + [\tilde n\mu]^2 - \tilde n\mu = [\tilde n\,\mu(w)]^2 \tag{6}
-$$</div>
-<p>(这正是 Poisson 的二阶阶乘矩 $\lambda^2$。)对照式 (5),它保留了 $\tilde n^2$ 主导项,丢掉了 $O(\tilde n)$ 的项 $-(2k-1)\tilde n\mu^2 + 2\tilde n\delta\mu$,其相对大小约为 $(\tilde n\mu)^{-1}$。</p>
 <div class="warn">
-<b>近似的合理性与边界。</b>$\tilde n$ 大、$k$ 较大时 $\mu$ 很小,单个词的出现是稀有事件。对非自重叠词($\delta=0$),出现事件近似独立,极限为 Poisson;对自重叠词,出现成簇,极限是复合 Poisson(簇的个数 Poisson,簇大小近似几何分布),此时式 (6) 会低估真实的 $\mathbf{E}[X(X-1)]$。论文的处理是:接受这一偏差,补充材料实验表明用式 (6) 和用精确式 (5) 的分类性能相当。
+<b>一个常见的误会。</b>有人会觉得"允许重叠地数"会把均值数多了,应该除以什么。不会。$\tilde n\mu$ 正是允许重叠数法下的精确均值。如果改成不允许重叠(数完一个 <span class="mono">HH</span> 就跳过去重新开始),均值会<b>变小</b>,而且公式复杂得多,那是另一套理论(Feller 的更新计数)。本页始终用允许重叠的计数。
 </div>
 
-<h3>3.8 最终统计量</h3>
+<h2>B3. 方差:重叠第一次露面</h2>
+<p>B2 说均值看不见重叠。方差看得见。原因在于方差不是一项一项加起来的,它还要把<b>每一对</b>位置之间的关系加进去。</p>
+
+<h3>B3.1 把方差拆成"每个位置"加"每对位置"</h3>
+<p>$X_w=\sum_i\mathbb I_i$ 是 $\tilde n$ 个 0/1 变量之和。和的方差有一个通用公式,不要求各项独立:</p>
 <div class="eq">$$
-\boxed{\; D_2^R = \frac{\sum_w \{ X_w(X_w-1) - [\tilde n\,\mu(w)]^2 \}}{\tilde n(\tilde n-1)} \;} \tag{7}
+\mathbf{Var}[X_w]=\sum_{i=1}^{\tilde n}\mathbf{Var}[\mathbb I_i]+2\sum_{1\le i\lt j\le\tilde n}\mathbf{Cov}[\mathbb I_i,\mathbb I_j] \tag{B3}
 $$</div>
-<p>注意分子对全部 $4^k$ 个词求和,但 $X_w=0$ 的词只贡献常数 $-[\tilde n\mu(w)]^2$,而 $\sum_w \mu(w)^2 = \big(\sum_a p_a^2\big)^k$,所以实际只需遍历出现过的词即可。</p>
-
-<h3>3.9 被放弃的变体</h3>
+<p>两块分别是:</p>
 <ul>
-<li><b>$D_2^{*}$ 式标准化</b>:每项除以 $X_w(X_w-1)$ 的标准差。论文按无闭式处理、逐词数值求;补充材料显示 $k$ 短时略有增益,$k$ 长时无提升甚至失效。<a href="d2r_markov.html">第二页</a>给出的精确闭式可以 $O(k)$ 算出每个词的标准差,若重做这个变体应直接用它。</li>
-<li><b>k-mer 计数向量的范数</b>(欧氏距离思路):能区分,但不如式 (2)。</li>
+<li><b>单个位置。</b>$\mathbb I_i$ 是成功概率 $\mu$ 的 Bernoulli 变量,$\mathbf{Var}[\mathbb I_i]=\mu(1-\mu)$。$\tilde n$ 个加起来是 $\tilde n\mu(1-\mu)$。如果各位置独立,方差到此为止,$X_w$ 就是二项分布。</li>
+<li><b>每对位置。</b>协方差的定义是 $\mathbf{Cov}[\mathbb I_i,\mathbb I_j]=\mathbf E[\mathbb I_i\mathbb I_j]-\mathbf E[\mathbb I_i]\mathbf E[\mathbb I_j]$。对 0/1 变量,$\mathbb I_i\mathbb I_j=1$ 当且仅当两处都是 $w$,所以
+$$\mathbf{Cov}[\mathbb I_i,\mathbb I_j]=\Pr[\text{位置 }i\text{ 和 }j\text{ 都是 }w]-\mu^2 .$$
+两处同时出现的概率比 $\mu^2$ 大,协方差为正,方差变大;比 $\mu^2$ 小,方差变小。</li>
 </ul>
+<p>于是全部问题归结为一个:<b>相距 $d=j-i$ 的两个位置同时是 $w$ 的概率是多少。</b>由平稳性,这个概率只依赖间距 $d$,不依赖 $i$ 本身,给它一个记号:</p>
+<div class="eq">$$
+\mu_d(w)=\Pr[\mathbb I_i=1,\ \mathbb I_{i+d}=1],\qquad d=1,2,\dots \tag{B4}
+$$</div>
+<p>它是一个概率,无量纲。间距为 $d$ 的位置对共有 $\tilde n-d$ 对($i$ 从 1 到 $\tilde n-d$)。把 (B3) 按间距分组:</p>
+<div class="eq">$$
+\mathbf{Var}[X_w]=\tilde n\mu(1-\mu)+2\sum_{d=1}^{\tilde n-1}(\tilde n-d)\big[\mu_d(w)-\mu^2\big] \tag{B5}
+$$</div>
 
-<h2>4. 参数与阈值</h2>
+<h3>B3.2 间距 $d\ge k$:两个窗口不共享字母,协方差为零</h3>
+<p>位置 $i$ 的窗口占 $A_i,\dots,A_{i+k-1}$,位置 $i+d$ 的窗口占 $A_{i+d},\dots,A_{i+d+k-1}$。当 $d\ge k$ 时两段字母没有交集。i.i.d. 下不相交的字母组独立,所以两个事件独立:</p>
+<div class="eq">$$
+\mu_d(w)=\mu(w)^2,\qquad \mathbf{Cov}[\mathbb I_i,\mathbb I_{i+d}]=0\qquad(d\ge k) \tag{B6}
+$$</div>
+<p>这一步把 (B5) 里的求和从 $\tilde n-1$ 项砍到 $k-1$ 项。<b>只有相距不到 $k$ 的位置对才对方差有贡献</b>,而这些位置对正是两个窗口部分重叠的情形。</p>
+
+<h3>B3.3 间距 $d\lt k$:A2 的条件概率</h3>
+<p>两个窗口重叠时,$\mu_d(w)$ 按条件概率拆开:</p>
+<div class="eq">$$
+\mu_d(w)=\Pr[\mathbb I_i=1]\cdot\Pr[\mathbb I_{i+d}=1\mid\mathbb I_i=1]=\mu(w)\cdot\Pr[\mathbb I_{i+d}=1\mid\mathbb I_i=1]
+$$</div>
+<p>后面这个条件概率正是 A2 算过的:已知位置 $i$ 处的 $k$ 个字母是 $w$,位置 $i+d$ 处的窗口有 $k-d$ 个字母落在已知区域、$d$ 个字母是新抽的。已知区域那 $k-d$ 个字母要等于 $w$ 的前 $k-d$ 个,而它们实际上是 $w$ 的后 $k-d$ 个,能不能对上是确定的事:对得上记 $\varepsilon_{k-d}(w)=1$($u=k-d$ 是 $w$ 的一个 border),对不上记 $\varepsilon_{k-d}(w)=0$。新抽的 $d$ 个字母要等于 $w$ 的最后 $d$ 个字母,概率 $\prod_{j=k-d+1}^{k}p_{w_j}$。所以</p>
+<div class="eq">$$
+\mu_d(w)=\mu(w)\,\varepsilon_{k-d}(w)\prod_{j=k-d+1}^{k}p_{w_j}\qquad(1\le d\le k-1) \tag{B7}
+$$</div>
+<p>把 (B7) 对 $d=1,\dots,k-1$ 加起来再除以 $\mu$,得到的就是 A2 的 overlapping coefficient:</p>
+<div class="eq">$$
+\delta(w)=\sum_{d=1}^{k-1}\frac{\mu_d(w)}{\mu(w)}=\sum_{d=1}^{k-1}\varepsilon_{k-d}(w)\prod_{j=k-d+1}^{k}p_{w_j} \tag{B8}
+$$</div>
+<p>这就是 $\delta$ 在推导里第一次自然出现的位置:它是所有重叠间距上"两处同时出现的概率"之和,再按 $\mu$ 归一。(B8) 与 A2 的定义完全相同,只是那里从"已知一个 $w$ 后面还有几个"的角度说,这里从方差的角度说。</p>
+
+<h3>B3.4 精确式,以及论文的式 (4)</h3>
+<p>把 (B6)(B7) 代入 (B5):</p>
+<div class="eq">$$
+\mathbf{Var}[X_w]=\tilde n\mu(1-\mu)+2\sum_{d=1}^{k-1}(\tilde n-d)\Big[\mu\,\varepsilon_{k-d}(w)\prod_{j=k-d+1}^{k}p_{w_j}-\mu^2\Big] \tag{B9}
+$$</div>
+<div>这是 i.i.d. 下 $\mathbf{Var}[X_w]$ 的<b>精确</b>公式,对任何 $n\ge k$ 成立。它只用到 $\mu$、$k-1$ 个 border 指示和几个字母概率,手算也不难。
+<span class="pop">(悬停看硬币例子,并用 32 种结果直接验算)
+<span class="popbox">
+<h4>均匀硬币,$n=5$,$k=2$,$\tilde n=4$,$\mu=1/4$</h4>
+只有 $d=1$ 一个重叠间距,位置对数 $\tilde n-1=3$。<br>
+<b>HH:</b>$u=1$ 是 border,新字母是一个 H,$\mu_1=\mu\cdot p_H=\tfrac14\cdot\tfrac12=\tfrac18$。
+$$\mathbf{Var}=4\cdot\tfrac14\cdot\tfrac34+2\cdot3\cdot\big(\tfrac18-\tfrac1{16}\big)=\tfrac34+\tfrac38=\tfrac98$$
+<b>HT:</b>没有 border,$\mu_1=0$。
+$$\mathbf{Var}=\tfrac34+2\cdot3\cdot\big(0-\tfrac1{16}\big)=\tfrac34-\tfrac38=\tfrac38$$
+<hr>
+<b>直接验算。</b>5 次抛掷共 32 种等可能结果,按 $X$ 的取值数个数:
 <table>
-<tr><th>项目</th><th>建议</th></tr>
-<tr><td>k-mer 大小</td><td>$D_2^R$ 对 $k$ 不敏感。若已知重复类型,取略小于重复单元长度的 $k$ 最稳健,可抵抗不精确重复的噪声。</td></tr>
-<tr><td>背景模型</td><td>i.i.d.,碱基频率从数据估计。可换成 BIC 定阶的 Markov 链,以抑制序列组成本身造成的假重复。</td></tr>
-<tr><td>阈值(有监督)</td><td>已知阳性/阴性训练集,取最小分类错误点。</td></tr>
-<tr><td>阈值(无监督)</td><td>$D_2^R$ 分布呈双峰时取谷底。</td></tr>
-<tr><td>阈值(Q-value)</td><td>模拟零模型序列得经验 p 值,按 Storey (2003) Q-value 控制 FDR。</td></tr>
+<tr><th>$X$</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
+<tr><td>HH 的结果数</td><td>13</td><td>10</td><td>6</td><td>2</td><td>1</td></tr>
+<tr><td>HT 的结果数</td><td>6</td><td>20</td><td>6</td><td>0</td><td>0</td></tr>
 </table>
-<p>$D_2^R$ 的零分布与备择分布尚无闭式,阈值只能启发式设定。</p>
+HH:$\mathbf E[X^2]=(0\cdot13+1\cdot10+4\cdot6+9\cdot2+16\cdot1)/32=68/32$,$\mathbf{Var}=68/32-1^2=9/8$。<br>
+HT:$\mathbf E[X^2]=(20+24)/32=44/32$,$\mathbf{Var}=44/32-1=3/8$。<br>
+两者均值都是 1,方差差了三倍。HH 的计数散得开(0 到 4 都有),HT 的计数挤在 1 附近(20 种结果恰好 1 次)。这就是 A1 问题二的数值版本。
+</span></span></div>
 
-<h2>一句话概括</h2>
+<p>论文式 (4) 是 (B9) 的简化:当 $\tilde n\gg k$ 时,把 $\tilde n-d$ 换成 $\tilde n$,方括号里的和用 (B8) 写成 $\delta$:</p>
+<div class="eq">$$
+\mathbf{Var}[X_w]\approx\tilde n\mu(1-\mu)+2\tilde n\mu\big[\delta(w)-(k-1)\mu\big]
+=\tilde n\mu\big[1-\mu+2\delta(w)-2(k-1)\mu\big] \tag{B10}
+$$</div>
+<div>(B10) 与 (B9) 的差是 $2\sum_{d=1}^{k-1}d\,[\mu_d-\mu^2]$,它不随 $\tilde n$ 增长,所以相对误差是 $k/\tilde n$ 量级。硬币例子里 $\tilde n=4$ 太短,(B10) 给 HH 的是 $5/4$、HT 的是 $1/4$,与精确值 $9/8$、$3/8$ 各差 $1/8$;基因组尺度 $\tilde n$ 是百万量级,这个差可以不管。
+<span class="pop">(悬停看一个碱基例子)
+<span class="popbox">
+<h4>$w=$ <span class="mono">acac</span>,$p_a=p_t=0.3$,$p_c=p_g=0.2$,$n=8$,$\tilde n=5$</h4>
+$\mu=0.3\cdot0.2\cdot0.3\cdot0.2=0.0036$,$\mu^2=1.296\times10^{-5}$。border 只有 $u=2$(ac),即只有 $d=2$ 能重叠,新字母是 ac:$\mu_2=\mu\cdot p_ap_c=0.0036\times0.06=2.16\times10^{-4}$;$\mu_1=\mu_3=0$。<br>
+按 (B9):
+$$\mathbf{Var}=5\cdot0.0036\cdot0.9964+2\big[4(0-\mu^2)+3(\mu_2-\mu^2)+2(0-\mu^2)\big]=0.0179352+0.0010627=0.0189979$$
+穷举全部 $4^8$ 条序列算出的精确值是 $118737/6250000=0.0189979$,一致。<br>
+按 (B10):$\delta=p_ap_c=0.06$,$\mathbf{Var}\approx5\cdot0.0036\,[1-0.0036+0.12-6\cdot0.0036]=0.0197$,偏高 4%,原因是 $\tilde n=5$ 太短。
+</span></span></div>
+
 <div class="note">
-$D_2^R$ 把 $D_2$ 的跨序列 k-mer 匹配计数改成序列内自匹配计数 $\sum_w X_w(X_w-1)$,减去 i.i.d. 背景下的期望并按 $\binom{\tilde n}{2}$ 归一化。
-精确期望 (5) 含自重叠系数 $\delta(w)$,刻画词的成簇倾向;实用中用 Poisson 近似 $[\tilde n\mu(w)]^2$ 替代,只保留 $\tilde n^2$ 主导项。
+<b>(B10) 里两个方向的修正。</b>相对于把 $X_w$ 当二项分布的方差 $\tilde n\mu(1-\mu)$:
+<ul>
+<li>$-2\tilde n(k-1)\mu^2$:$k-1$ 种重叠间距下,本来"独立"会给 $\mu^2$ 的同时出现概率,现在要靠 border 才能实现。不能自重叠的词在这些间距上同时出现的概率是 0,每一对都贡献 $-\mu^2$,方差<b>降低</b>。HT 就是这样:方差 $3/8$ 远小于二项的 $3/4$。这叫欠离散(under-dispersion)。</li>
+<li>$+2\tilde n\mu\delta(w)$:能自重叠的词在 border 对应的间距上同时出现的概率是 $\mu\cdot(\text{几个字母的概率})$,远大于 $\mu^2$,方差<b>升高</b>。HH 的方差 $9/8$ 大于二项的 $3/4$。这就是 A 页说的成簇。</li>
+</ul>
+一个词的方差是升是降,看 $2\delta$ 和 $(2k-1)\mu$ 谁大。对基因组里的长词,$\mu$ 极小,$(2k-1)\mu$ 可以忽略,方差主要由 $\delta$ 决定:$\delta=0$ 的词近似 Poisson,$\delta\gt0$ 的词比 Poisson 更散。
 </div>
+
+<div class="note">
+<b>$\mathbf{Var}[X_w]$ 是什么;一个更好读的量。</b>方差的量纲是"个数的平方",数值本身不好比较。常用的是它与均值的比:
+$$\frac{\mathbf{Var}[X_w]}{\mathbf E[X_w]}\approx1-\mu+2\delta(w)-2(k-1)\mu$$
+这个比无量纲,叫<b>离散指数</b>(index of dispersion)。Poisson 分布的离散指数是 1;大于 1 是成簇,小于 1 是欠离散。均匀硬币下 HH 是 $1.25$,HT 是 $0.25$;$\mu$ 很小的长词,它约等于 $1+2\delta$。
+</div>
+
+<div class="warn">
+<b>本节验证。</b>脚本 <code>b3_var_check.py</code> 用有理数按 (B9) 算 HH、HT、HHH、aa、aca、acg、acac 在短序列上的方差,与穷举全部序列得到的精确值逐一相等。
+</div>
+
+<h2>B4. 等待时间与簇</h2>
+<p>B3 的结论是:能自重叠的词方差大,因为它的出现爱扎堆。本节从两个别的角度看同一件事:从序列开头数起,<b>第一次</b>看到 $w$ 平均要等多久;以及一堆挤在一起的出现(下面叫"簇")平均有多大。两个问题都只用 B3 已经算出的 $\mu_d(w)$。</p>
+
+<h3>B4.1 首次出现的等待时间</h3>
+<p>记 $T_w$ 为 $w$ 第一次完整出现时已经抛出的字母个数,即第一次出现的<b>最后一个</b>字母所在的位置。它是随机变量,取值 $\ge k$,单位是"字母个数"。A1 用状态方程算出均匀硬币下 $\mathbf E[T_{\text{HH}}]=6$、$\mathbf E[T_{\text{HT}}]=4$,现在推一般公式。</p>
+<p>思路是<b>用两种方法数同一个期望 $\mathbf E[X_w]$</b>。第一种是 B2:$\mathbf E[X_w]=\tilde n\mu$。第二种按"第一次出现在哪"分类。设第一次出现结束在位置 $s$(起点是 $s-k+1$)。除了这一次,序列里其余的出现分两类:</p>
+<ul>
+<li><b>与它重叠的。</b>起点在 $s-k+2,\dots,s$,即相对第一次出现错位 $d=1,\dots,k-1$。已知第一次出现,错位 $d$ 处再出现的概率是 A2 的条件概率 $\mu_d/\mu$(见 (B7));它只依赖位置 $s$ 之后新抽的字母,与"这是第一次"这件事无关。按 (B8),这一类的期望个数是 $\delta(w)$。</li>
+<li><b>不重叠的。</b>起点在 $s+1,\dots,\tilde n$,共 $\tilde n-s$ 个位置。每个窗口整个落在位置 $s$ 之后,与前面的一切独立,出现概率就是 $\mu$。这一类的期望个数是 $\mu(\tilde n-s)$。</li>
+</ul>
+<p>所以已知 $T_w=s$ 时,$\mathbf E[X_w\mid T_w=s]=1+\delta+\mu(\tilde n-s)$。对 $s$ 取平均,两种数法相等:</p>
+<div class="eq">$$
+\tilde n\mu=\mathbf E[X_w]=1+\delta(w)+\mu\big(\tilde n-\mathbf E[T_w]\big)\qquad\Longrightarrow\qquad
+\mathbf E[T_w]=\frac{1+\delta(w)}{\mu(w)} \tag{B11}
+$$</div>
+<div>两边的 $\tilde n\mu$ 消掉,$\tilde n$ 就不见了:等待时间当然与序列多长无关。
+<span class="pop">(悬停看硬币与碱基的数值)
+<span class="popbox">
+<h4>均匀硬币,$\mu=1/2^k$</h4>
+HH:$\delta=1/2$,$\mathbf E[T]=(1+\tfrac12)\times4=6$。HT:$\delta=0$,$\mathbf E[T]=4$。与 A1 状态方程的结果一致。<br>
+HHH:周期 $\{1,2\}$,$\delta=\tfrac12+\tfrac14=\tfrac34$,$\mathbf E[T]=\tfrac74\times8=14$。HTH:周期 $\{2\}$,$\delta=\tfrac14$,$\mathbf E[T]=10$。THH:$\delta=0$,$\mathbf E[T]=8$。三个长度为 3 的词等待时间从 8 到 14。
+<hr>
+<h4>碱基,$p_a=p_t=0.3$,$p_c=p_g=0.2$</h4>
+acgt:$\mu=0.0036$,$\delta=0$,$\mathbf E[T]=1/0.0036=277.8$。<br>
+aaaa:$\mu=0.0081$,$\delta=0.3+0.09+0.027=0.417$,$\mathbf E[T]=1.417/0.0081=174.9$。<br>
+aaaa 比 acgt 更爱成簇,但等得反而短,因为 $\mu$ 大了一倍多。$1/\mu$ 是主项,$(1+\delta)$ 只是修正因子。要比较成簇的影响,应固定 $\mu$:acac 与 acgt 的 $\mu$ 相同,acac 的 $\delta=p_ap_c=0.06$,$\mathbf E[T]=294.4$,比 acgt 多等 6%。
+</span></span></div>
+<div class="note">
+<b>(B11) 说了什么。</b>$\mathbf E[T_w]$ 是期望的字母个数,有量纲,总不小于 $1/\mu$。$1/\mu$ 是"每个位置出现概率为 $\mu$ 的事件平均隔 $1/\mu$ 个位置来一次"的朴素答案;因子 $1+\delta$ 是自重叠带来的<b>推迟</b>。推迟的原因和 B3 的方差是同一个:总出现数的均值 $\tilde n\mu$ 与重叠无关(B2),爱成簇的词把同样多的出现挤进更少的簇里,簇与簇之间的空隙就更长,第一个簇也来得更晚。$\delta/\mu$ 就是被推迟的期望长度,A2 结尾提到过。
+</div>
+<div class="warn">
+<b>边界项。</b>上面的分类默认第一次出现之后还放得下 $k-1$ 个重叠位置,并且 $T_w\le n$。序列有限时这两条在末尾附近不成立,但 $\Pr[T_w\gt n]$ 随 $n$ 按几何速度衰减,让 $n\to\infty$ 后误差项全部消失,而两边的 $\tilde n\mu$ 是精确相消的,所以 (B11) 是精确等式。脚本 <code>b4_check.py</code> 用 A1 那种状态方程(有理数)对 12 个词算出 $\mathbf E[T_w]$,与 (B11) 逐一相等。
+</div>
+
+<h3>B4.2 簇:定义与延续概率</h3>
+<p>把 $w$ 的所有出现按起点从小到大排好。相邻两次出现若起点相距小于 $k$,它们共享字母,称为重叠;把连续重叠的出现连成一串,这一串叫一个<b>簇</b>(clump)。簇与簇之间不重叠。例如序列 <span class="mono">HHHHTHH</span> 里 HH 出现在起点 1、2、3、6:前三个两两相邻、错位 1,连成一个大小为 3 的簇;起点 6 的那个单独成一个大小为 1 的簇。$\delta=0$ 的词每个簇的大小都是 1。</p>
+<p>簇的核心量是<b>延续概率</b>:</p>
+<div class="eq">$$
+a(w)=\Pr[\text{本次出现之后还有与它重叠的出现}\mid\text{本次出现}] \tag{B12}
+$$</div>
+<p>它是一个真正的概率,严格小于 1。它与 $\delta$ 的区别:$\delta$ 是重叠的后续出现的<b>期望个数</b>,$a$ 是"至少有一个"的<b>概率</b>。个数的期望不小于"至少一个"的概率,所以 $a\le\delta$。</p>
+<p>怎么算 $a$?"至少一个"是 $k-1$ 个事件的并,事件 $d$ 是"错位 $d$ 处再出现",概率 $\mu_d/\mu$。这些事件可能互相包含。以 aaaa 为例,错位 2 处再出现要求接下来两个字母是 aa,它蕴含错位 1 处再出现(接下来一个字母是 a);错位 3 同理。所以三个事件的并就是错位 1 那一个,$a(\text{aaaa})=p_a$,而 $\delta=p_a+p_a^2+p_a^3$ 把包含在内的事件重复数了。一般地,若周期 $d'$ 是更小周期 $d$ 的倍数,错位 $d'$ 的事件被错位 $d$ 的事件包含。去掉这些,剩下的周期叫<b>主周期</b>(A2 结尾提过),Schbath(1995)证明主周期对应的事件两两不相容,于是</p>
+<div class="eq">$$
+a(w)=\sum_{d\in\text{主周期}(w)}\prod_{j=k-d+1}^{k}p_{w_j}=\sum_{d\in\text{主周期}(w)}\frac{\mu_d(w)}{\mu(w)} \tag{B13}
+$$</div>
+<p>与 (B8) 比较:$\delta$ 对全部周期求和,$a$ 只对主周期求和。没有周期是别的周期的倍数时(HH、acac、aacaa)两者相等。</p>
+
+<h3>B4.3 簇的大小与簇的个数</h3>
+<p>已知一次出现,它后面是否还有重叠的出现,只取决于它之后新抽的字母,与它之前发生过什么无关;若有,新的那次出现又处在同样的局面。所以簇每延长一次的概率都是 $a$,簇的大小 $C$ 服从几何分布:</p>
+<div class="eq">$$
+\Pr[C=m]=(1-a)\,a^{m-1}\ (m\ge1),\qquad \mathbf E[C]=\frac{1}{1-a} \tag{B14}
+$$</div>
+<p>反过来问一次出现是不是簇的第一个,即它前面没有与它重叠的出现。把序列倒过来读,周期集合不变(前缀等于后缀的性质是对称的),而"前面错位 $d$ 处有出现"要求的是 $w$ 的<b>前</b> $d$ 个字母,概率 $\prod_{j\le d}p_{w_j}$。$d$ 是周期意味着 $w_1\cdots w_{k-d}=w_{d+1}\cdots w_k$,两边概率相等,两边各乘上剩余部分得 $\prod_{j\le d}p_{w_j}=\prod_{j>k-d}p_{w_j}$。于是向前看和向后看的概率相同:</p>
+<div class="eq">$$
+\Pr[\text{本次出现是簇的第一个}\mid\text{本次出现}]=1-a(w) \tag{B15}
+$$</div>
+<div>由此得簇的期望个数:每个位置是"簇的第一个出现"的概率是 $\mu(1-a)$,所以整条序列里簇的期望个数是 $\tilde n\mu(1-a)$。它乘以簇的平均大小 $1/(1-a)$ 恰好回到 $\tilde n\mu$,与 B2 一致。
+<span class="pop">(悬停看数值表)
+<span class="popbox">
+<h4>$p_a=p_t=0.3$,$p_c=p_g=0.2$;硬币均匀</h4>
+<table>
+<tr><th>词</th><th>周期</th><th>主周期</th><th>$\mu$</th><th>$\delta$</th><th>$a$</th><th>$\mathbf E[T]$</th><th>$\mathbf E[C]$</th></tr>
+<tr><td class="mono">HH</td><td>1</td><td>1</td><td>1/4</td><td>1/2</td><td>1/2</td><td>6</td><td>2</td></tr>
+<tr><td class="mono">HT</td><td>无</td><td>无</td><td>1/4</td><td>0</td><td>0</td><td>4</td><td>1</td></tr>
+<tr><td class="mono">HHH</td><td>1, 2</td><td>1</td><td>1/8</td><td>3/4</td><td>1/2</td><td>14</td><td>2</td></tr>
+<tr><td class="mono">aaaa</td><td>1, 2, 3</td><td>1</td><td>0.0081</td><td>0.417</td><td>0.30</td><td>174.9</td><td>1.43</td></tr>
+<tr><td class="mono">acac</td><td>2</td><td>2</td><td>0.0036</td><td>0.06</td><td>0.06</td><td>294.4</td><td>1.06</td></tr>
+<tr><td class="mono">acgt</td><td>无</td><td>无</td><td>0.0036</td><td>0</td><td>0</td><td>277.8</td><td>1</td></tr>
+<tr><td class="mono">aacaa</td><td>3, 4</td><td>3, 4</td><td>0.00162</td><td>0.0234</td><td>0.0234</td><td>631.7</td><td>1.02</td></tr>
+</table>
+aaaa 的 $\mathbf E[C]-1=a/(1-a)=0.4286$ 是簇里第一个之后平均还有几个;$\delta=0.417$ 是与第一个重叠的平均还有几个。前者数整条链,后者只数错位不到 $k$ 的,所以前者略大。<br>
+模拟 200 万个字母:HH 的簇平均大小 2.002、$\Pr[C\ge2]=0.500$、$\Pr[C\ge3]=0.250$;aaaa 的簇平均大小 1.435、每个字母的簇数 0.00566 对 $\mu(1-a)=0.00567$。
+</span></span></div>
+
+<div class="note">
+<b>簇之间的间隔。</b>簇的第一个出现之间的距离,精确分布要用 B8 的自动机方法。对 $\mu$ 很小的长词,它近似几何分布,均值 $1/[\mu(1-a)]$。这时簇的个数近似 Poisson(均值 $\tilde n\mu(1-a)$),簇的大小几何分布,$X_w$ 就近似"Poisson 个几何变量之和",即复合 Poisson 分布(Pólya–Aeppli)。这是后面处理稀有词零分布的基础,B5 会用它的均值和方差做对照。
+</div>
+
+<h2>B5. 二阶阶乘矩:$\mathbf E[X_w(X_w-1)]$</h2>
+<p>B3 算了方差,B4 算了等待时间。本节算的量看起来像方差的亲戚,但意义更直接:<b>$X_w(X_w-1)$ 是"两次不同的出现"能配成的有序对的个数。</b>这个量是后面统计量的核心零件(E 页),这里先把它在零假设下的期望算精确,再看论文用的两个近似丢了什么。</p>
+
+<h3>B5.1 它数的是什么</h3>
+<p>把 $X_w=\sum_i\mathbb I_i$ 平方。0/1 变量平方等于自己,所以</p>
+<div class="eq">$$
+X_w^2=\sum_i\mathbb I_i^2+\sum_{i\ne j}\mathbb I_i\mathbb I_j=X_w+\sum_{i\ne j}\mathbb I_i\mathbb I_j
+\qquad\Longrightarrow\qquad
+X_w(X_w-1)=\sum_{i\ne j}\mathbb I_i\mathbb I_j \tag{B16}
+$$</div>
+<p>右边每一项在"位置 $i$ 和 $j$ 都是 $w$"时为 1,否则为 0。所以 $X_w(X_w-1)$ 就是<b>两个不同位置都是 $w$ 的有序对的个数</b>;$X_w=3$ 时是 $3\times2=6$ 对。它的期望是期望的对数,无量纲,可以远大于 1。取期望,每一项是 B3 定义的 $\mu_d$($d=|i-j|$),间距 $d$ 的有序对有 $2(\tilde n-d)$ 个:</p>
+<div class="eq">$$
+\mathbf E[X_w(X_w-1)]=\sum_{i\ne j}\mu_{|i-j|}(w)=2\sum_{d=1}^{\tilde n-1}(\tilde n-d)\,\mu_d(w) \tag{B17}
+$$</div>
+<p>这与 B3 的 (B5) 是同一个求和,只是 B3 里每项减了 $\mu^2$。事实上 $\mathbf E[X(X-1)]=\mathbf{Var}[X]+(\mathbf EX)^2-\mathbf EX$,两条路算出来必然一致;这里走直接的一条,因为它更直白。</p>
+
+<h3>B5.2 精确式</h3>
+<p>按 B3.2、B3.3 把 (B17) 分成不重叠和重叠两段。不重叠段 $d\ge k$ 每项 $\mu_d=\mu^2$,而 $\sum_{d=k}^{\tilde n-1}(\tilde n-d)=1+2+\cdots+(\tilde n-k)=(\tilde n-k)(\tilde n-k+1)/2$。重叠段 $d\lt k$ 用 (B7)。合起来:</p>
+<div class="eq">$$
+\mathbf E[X_w(X_w-1)]=(\tilde n-k)(\tilde n-k+1)\,\mu^2+2\sum_{d=1}^{k-1}(\tilde n-d)\,\mu\,\varepsilon_{k-d}(w)\prod_{j=k-d+1}^{k}p_{w_j} \tag{B18}
+$$</div>
+<div>(B18) 对 $\tilde n\ge k-1$(即 $n\ge2k-2$)精确成立;更短的序列里有些间距根本放不下,把 $\tilde n-d$ 换成 $\max(\tilde n-d,0)$ 即可。第一项是"两次出现互不重叠"的对数,第二项是"两次出现重叠"的对数。
+<span class="pop">(悬停看硬币例子)
+<span class="popbox">
+<h4>均匀硬币,$n=5$,$k=2$,$\tilde n=4$,$\mu=1/4$</h4>
+不重叠段:$(4-2)(4-1)\cdot\tfrac1{16}=\tfrac{6}{16}$。重叠段只有 $d=1$,$3$ 个位置对。<br>
+HH:$\mu_1=\tfrac18$,$\mathbf E[X(X-1)]=\tfrac6{16}+2\cdot3\cdot\tfrac18=\tfrac6{16}+\tfrac{12}{16}=\tfrac98$。<br>
+HT:$\mu_1=0$,$\mathbf E[X(X-1)]=\tfrac6{16}=\tfrac38$。
+<hr>
+<b>用 B3 弹窗里的 32 种结果表验算。</b>$x(x-1)$ 在 $x=0,1,2,3,4$ 时是 $0,0,2,6,12$。<br>
+HH:$(2\cdot6+6\cdot2+12\cdot1)/32=36/32=9/8$。HT:$2\cdot6/32=3/8$。一致。<br>
+HH 的 9/8 里有 12/16 来自重叠对:5 次抛掷太短,大部分配对是挤在一起的。基因组尺度上不重叠段占绝对主导,见下一个弹窗。
+</span></span></div>
+
+<h3>B5.3 论文的式 (5) 与式 (6)</h3>
+<p>论文用了两层近似。第一层是 B3.4 那种"把 $\tilde n-d$ 换成 $\tilde n$"。对 (B18) 这样做,并用 (B8) 把重叠段写成 $\delta$,得到论文式 (5):</p>
+<div class="eq">$$
+\mathbf E[X_w(X_w-1)]\approx(\tilde n^2-2k\tilde n+\tilde n)\,\mu^2+2\tilde n\,\mu\,\delta(w) \tag{B19}
+$$</div>
+<p>(B18) 减 (B19) 等于 $(k^2-k)\mu^2-2\sum_{d=1}^{k-1}d\,\mu_d$,不随 $\tilde n$ 增长,基因组尺度上可以忽略。硬币例子里 (B19) 给 HH 的是 $5/4$、HT 的是 $1/4$,各差 $1/8$,与 B3 的情形一样。</p>
+<p>第二层是把 $X_w$ 当 Poisson 变量。Poisson 变量的二阶阶乘矩是均值的平方,于是论文式 (6):</p>
+<div class="eq">$$
+\mathbf E[X_w(X_w-1)]\approx(\tilde n\mu)^2 \tag{B20}
+$$</div>
+<p>(B20) 只保留了 (B19) 的 $\tilde n^2$ 项,丢掉的是两个 $\tilde n$ 一次项:$-(2k-1)\tilde n\mu^2$ 和 $+2\tilde n\mu\delta$。记 $\lambda=\tilde n\mu$ 为 $w$ 的期望计数,两项相对主项的大小分别是 $(2k-1)/\tilde n$ 和 $2\delta/\lambda$:</p>
+<ul>
+<li>$(2k-1)/\tilde n$:序列长度百万、$k$ 十几,是 $10^{-5}$ 量级,永远可以忽略。</li>
+<li>$2\delta/\lambda$:与序列长度无关,只看词的期望计数 $\lambda$。$\delta=0$ 的词没有这一项,(B20) 对它们几乎精确;能自重叠的词若期望只出现一两次,这一项和主项同一量级,(B20) 明显偏低。</li>
+</ul>
+<div>所以 (B20) 的适用范围是:<b>不自重叠的词,或者期望计数 $\lambda\gg\delta$ 的词</b>。稀有而爱成簇的词不满足。
+<span class="pop">(悬停看基因组尺度的数值)
+<span class="popbox">
+<h4>等概率碱基,$k=8$,$\mu=4^{-8}$</h4>
+<table>
+<tr><th>词</th><th>$\delta$</th><th>$\tilde n$</th><th>$\lambda$</th><th>(B18) 精确</th><th>(B19)</th><th>(B20)</th></tr>
+<tr><td class="mono">aaaaaaac</td><td>0</td><td>$10^5$</td><td>1.53</td><td>2.328</td><td>2.328</td><td>2.328</td></tr>
+<tr><td class="mono">aaaaaaaa</td><td>0.333</td><td>$10^5$</td><td>1.53</td><td>3.345</td><td>3.345</td><td>2.328 (−30%)</td></tr>
+<tr><td class="mono">acacacac</td><td>0.067</td><td>$10^5$</td><td>1.53</td><td>2.531</td><td>2.531</td><td>2.328 (−8%)</td></tr>
+<tr><td class="mono">aaaaaaaa</td><td>0.333</td><td>$10^6$</td><td>15.3</td><td>243.0</td><td>243.0</td><td>232.8 (−4%)</td></tr>
+<tr><td class="mono">acacacac</td><td>0.067</td><td>$10^6$</td><td>15.3</td><td>234.9</td><td>234.9</td><td>232.8 (−1%)</td></tr>
+</table>
+(B19) 与精确值在小数点后三位都一样:第一层近似无害。(B20) 对 $\delta=0$ 的词无害,对自重叠词的偏差就是 $2\delta/\lambda$:aaaaaaaa 在 $\lambda=1.53$ 时 $2\times0.333/1.53=44\%$ 的相对差,表里 $2.328/3.345-1=-30\%$ 是同一件事换个分母说。
+</span></span></div>
+
+<div class="note">
+<b>要不要用近似。</b>(B18) 只比 (B20) 多算 $k-1$ 项,每项是几个字母概率的乘积,代价可以忽略,所以没有理由不用精确式。论文用 (B20) 是为了写法简洁,补充材料里比较过两者的分类效果相当;原因从上表能看出来:偏差集中在少数自重叠词上,而这些词在全部 $4^k$ 个词里占比很小。C 页第 1 节回顾了论文的原始推导。
+</div>
+<div class="note">
+<b>与 B4 的簇图像对照。</b>若把 $X_w$ 当"Poisson 个簇、簇大小几何分布"的复合 Poisson 变量,它的二阶阶乘矩是 $(\tilde n\mu)^2+2\tilde n\mu\cdot a/(1-a)$。对照 (B19),它用 $a/(1-a)$ 代替了 $\delta$:前者数整条簇里第一个之后的所有出现,后者只数与第一个重叠的。稀有词两者接近(aaaa:0.429 对 0.417),但既然有精确式,这个近似只用来理解,不用来计算。
+</div>
+<div class="warn">
+<b>本节验证。</b>脚本 <code>b5_check.py</code> 用有理数按 (B18) 算 9 个 (词, 长度) 组合,包括 $\tilde n=k-1$ 的边界情形,与穷举全部序列的精确值逐一相等;基因组尺度的表也由它生成。
+</div>
+
+<h2>B6. 高阶阶乘矩与 $\mathbf{Var}[X_w(X_w-1)]$</h2>
+<p>B5 算出了 $X_w(X_w-1)$ 的期望。要知道它的波动,就要算它的方差,而这需要 $X_w$ 的三阶、四阶阶乘矩。本节只讲思路和结果;完整推导、完全展开和数值验证在 <a href="d2r_iid_variance.html">C 页</a>第 2、3 节。</p>
+
+<h3>B6.1 三个、四个位置同时是 $w$ 的概率</h3>
+<p>B3 的关键一步是:两个位置同时是 $w$ 的概率只依赖它们的间距 $d$,并且可以写成 $\mu_d=\mu\cdot g(d)$,其中</p>
+<div class="eq">$$
+g(d)=\Pr[\mathbb I_{i+d}=1\mid\mathbb I_i=1]=\frac{\mu_d(w)}{\mu(w)}=
+\begin{cases}\varepsilon_{k-d}(w)\prod_{j=k-d+1}^{k}p_{w_j},&1\le d\le k-1\\[4pt]\mu(w),&d\ge k\end{cases} \tag{B21}
+$$</div>
+<p>$g(d)$ 是条件概率:已知位置 $i$ 是 $w$,位置 $i+d$ 也是 $w$ 的概率。$d\ge k$ 时两窗口独立,条件概率退回 $\mu$。三个位置 $s_1\lt s_2\lt s_3$ 同时是 $w$ 的概率呢?按链式法则:</p>
+<div class="eq">$$
+\Pr[s_1,s_2,s_3\text{ 都是 }w]=\Pr[s_1]\cdot\Pr[s_2\mid s_1]\cdot\Pr[s_3\mid s_1,s_2]
+$$</div>
+<p>最后一个因子里,位置 $s_3$ 的窗口从 $s_3\ge s_2$ 开始,它能碰到的"已知字母"全在 $s_2$ 的窗口里(比 $s_2$ 更靠前的已知字母它够不着),所以条件只依赖 $s_2$ 处那份 $w$ 和新字母,等于 $g(s_3-s_2)$。于是三个位置的联合概率是 $\mu\,g(d_1)\,g(d_2)$,$d_1=s_2-s_1$、$d_2=s_3-s_2$ 是相邻间距。同样的话对任意多个位置都成立:</p>
+<div class="eq">$$
+\Pr[s_1\lt\cdots\lt s_m\text{ 都是 }w]=\mu(w)\prod_{r=1}^{m-1}g(s_{r+1}-s_r) \tag{B22}
+$$</div>
+<div>联合概率<b>沿相邻间距因子化</b>,这是整个高阶理论能算的原因。
+<span class="pop">(悬停看硬币例子)
+<span class="popbox">
+<h4>均匀硬币,数 HH,$g(1)=p_H=\tfrac12$,$g(d)=\mu=\tfrac14$($d\ge2$)</h4>
+位置 1、2、3 都是 HH:(B22) 给 $\mu\,g(1)\,g(1)=\tfrac14\cdot\tfrac12\cdot\tfrac12=\tfrac1{16}$。直接看:这要求字母 1 到 4 全是 H,概率 $(1/2)^4=1/16$。一致。<br>
+位置 1、2、4 都是 HH:$\mu\,g(1)\,g(2)=\tfrac14\cdot\tfrac12\cdot\tfrac14=\tfrac1{32}$。直接看:字母 1、2、3 是 H,字母 4、5 是 H,五个字母全定,$1/32$。一致。<br>
+位置 1、3 都是 HH,位置 2 不作要求:$\mu\,g(2)=\tfrac1{16}$,字母 1、2、3、4 全是 H。注意这时位置 2 自动也是 HH。所以"位置 1、3 都是 HH"和"位置 1、2、3 都是 HH"是同一个事件,概率都是 $1/16$,这没有矛盾:(B22) 算的是"这些位置都是 $w$",不管其他位置是不是。
+</span></span></div>
+
+<h3>B6.2 阶乘矩是位置组上联合概率的和</h3>
+<p>C 页开头解释了下降阶乘 $(X)_m=X(X-1)\cdots(X-m+1)$:它是从 $X$ 次出现里挑出 $m$ 个不同的、<b>有序</b>的挑法数。(B16) 是 $m=2$ 的情形。一般地,每个大小为 $m$ 的位置集合 $S$ 若全是 $w$,就贡献 $m!$ 种排法,所以</p>
+<div class="eq">$$
+\mathbf E(X_w)_m=m!\sum_{|S|=m}\Pr[S\text{ 都是 }w]=m!\,\mu\sum_{d_1,\dots,d_{m-1}\ge1}\big(\tilde n-d_1-\cdots-d_{m-1}\big)\prod_{r=1}^{m-1}g(d_r) \tag{B23}
+$$</div>
+<p>第二个等号用了 (B22),并且把位置集合按相邻间距分类:间距为 $(d_1,\dots,d_{m-1})$ 的集合有 $\tilde n-\sum d_r$ 个(起点 $s_1$ 可以从 1 取到 $\tilde n-\sum d_r$;和超过 $\tilde n-1$ 的间距组合放不下,记作 0 个)。$m=2$ 时 (B23) 就是 (B17)。</p>
+
+<h3>B6.3 生成函数:把间距求和打包</h3>
+<p>(B23) 是 $m-1$ 重求和,$m=4$ 时手算已经很烦。生成函数把它压成一行。定义</p>
+<div class="eq">$$
+A(z)=\sum_{d=1}^{k-1}g(d)\,z^d,\qquad W(z)=\sum_{d\ge1}g(d)\,z^d=A(z)+\mu\frac{z^k}{1-z} \tag{B24}
+$$</div>
+<p>$A(z)$ 是重叠间距的多项式,$A(1)=\delta(w)$;$W(z)$ 把 $d\ge k$ 的 $\mu z^d$ 也加进来,用等比数列求和写成 $\mu z^k/(1-z)$。$W(z)^{m-1}$ 里 $z^t$ 的系数,正是"$m-1$ 个间距之和为 $t$"的所有组合的 $\prod g(d_r)$ 之和。还差一个因子 $(\tilde n-t)$:注意 $1/(1-z)^2=\sum_{j\ge0}(j+1)z^j$,把 $W^{m-1}$ 乘上它、取 $z^{\tilde n-1}$ 的系数,得到的就是 $\sum_t(\tilde n-t)\cdot[\text{和为 }t\text{ 的权重}]$。所以</p>
+<div class="eq">$$
+\mathbf E(X_w)_m=m!\,\mu(w)\,[z^{\tilde n-1}]\,\frac{W(z)^{m-1}}{(1-z)^2} \tag{B25}
+$$</div>
+<p>$[z^{\tilde n-1}]$ 表示"取 $z^{\tilde n-1}$ 的系数"。右边是只在 $z=1$ 有极点的有理函数,所以这个系数是 $\tilde n$ 的多项式,次数为 $m$。C 页第 2 节把它展成显式的有限和(用到 $A(z)^r$ 的系数),第 3 节把 $m=2,3,4$ 的结果完全展开成 $\mu$、$k$ 和 $\delta_q=\sum_d d^q g(d)$($q=0,1,2,3$;$\delta_0=\delta$)的多项式。</p>
+
+<h3>B6.4 $\mathbf{Var}[X_w(X_w-1)]$</h3>
+<p>$X_w(X_w-1)=(X_w)_2$,它的平方按 C 页验算过的恒等式 $(X)_2^2=(X)_4+4(X)_3+2(X)_2$ 拆开:</p>
+<div class="eq">$$
+\mathbf{Var}[X_w(X_w-1)]=\mathbf E(X_w)_4+4\,\mathbf E(X_w)_3+2\,\mathbf E(X_w)_2-\big[\mathbf E(X_w)_2\big]^2 \tag{B26}
+$$</div>
+<div>四个阶乘矩都由 (B25) 给出,所以 $\mathbf{Var}[X_w(X_w-1)]$ 在 i.i.d. 下有<b>精确闭式</b>:$\tilde n^4$ 项相消,剩下 $\tilde n$ 的三次多项式,系数由 $\mu$、$k$、$\delta_0,\dots,\delta_3$ 决定,给定词后 $O(k)$ 时间可算,对 $n\ge4k-4$ 精确。论文说它"没有简单闭式",准确的说法是闭式存在但展开后有几十项(C 页第 3 节列全)。
+<span class="pop">(悬停看硬币例子)
+<span class="popbox">
+<h4>均匀硬币,$n=5$,数 HH 与 HT</h4>
+用 B3 弹窗的 32 种结果表。$x=0,1,2,3,4$ 时 $(x)_2=0,0,2,6,12$,$(x)_3=0,0,0,6,24$,$(x)_4=0,0,0,0,24$。<br>
+HH(结果数 13,10,6,2,1):$\mathbf E(X)_2=36/32$,$\mathbf E(X)_3=(12+24)/32=36/32$,$\mathbf E(X)_4=24/32$。
+$$\mathbf{Var}[X(X-1)]=\tfrac{24}{32}+4\cdot\tfrac{36}{32}+2\cdot\tfrac{36}{32}-\big(\tfrac{36}{32}\big)^2=\tfrac{240}{32}-\tfrac{81}{64}=\tfrac{399}{64}\approx6.23$$
+HT(结果数 6,20,6,0,0):$\mathbf E(X)_2=12/32$,三阶、四阶都是 0。
+$$\mathbf{Var}[X(X-1)]=2\cdot\tfrac{12}{32}-\big(\tfrac{12}{32}\big)^2=\tfrac{39}{64}\approx0.61$$
+按 (B25) 用有理数算出的四个阶乘矩和方差与上面完全相同(脚本 <code>var_check.py</code>)。HH 的配对数期望 $9/8$、标准差 $2.5$;HT 的期望 $3/8$、标准差 $0.78$。配对数的波动比它的均值还大,这是稀疏区的常态,后面 E 页要面对。
+</span></span></div>
+
+<div class="note">
+<b>两个极端下的样子。</b>记 $\lambda=\tilde n\mu$。
+<ul>
+<li>稀疏区($\lambda$ 不大,基因组里的长词都是):若 $X_w$ 近似 Poisson,$\mathbf E(X)_m=\lambda^m$,(B26) 给 $\mathbf{Var}[X(X-1)]\approx4\lambda^3+2\lambda^2$。$\lambda\lt1$ 时标准差约 $\sqrt2\,\lambda$,与均值 $\lambda^2$ 相比大得多:一个词的配对数几乎全靠偶然。自重叠词还要加上 $\delta$ 的修正项,C 页有完整式子。</li>
+<li>稠密区($\lambda\gg1$,短词或极长序列):首项 $4\tilde n^3\mu^3(1+\mu+2\delta-2k\mu)$,即 $X_w$ 近似正态时 $X(X-1)\approx X^2$ 的方差 $4(\mathbf EX)^2\mathbf{Var}[X]$。</li>
+</ul>
+</div>
+<div class="warn">
+<b>本节验证。</b><code>var_check.py</code> 用有理数按 (B25)(B26) 算多个词、多个长度的 $\mathbf{Var}[X(X-1)]$,与穷举全部序列的精确值逐一相等;<code>var_expand.py</code> 用 sympy 做完全展开并在 247 个点上验证。均在 C 页说明。
+</div>
+
+<h2>B7. 从词到位置对:$N$ 的均值与方差</h2>
+<p>前面每一节都盯着一个固定的词 $w$。统计量要的却是全部词的配对数之和:</p>
+<div class="eq">$$
+N=\sum_{w\in\mathcal A^k}X_w(X_w-1) \tag{B27}
+$$</div>
+<p>按 B5 逐词算 $\mathbf E[X_w(X_w-1)]$ 再对 $4^k$ 个词求和,能得到 $\mathbf E[N]$,但要枚举词表;而 $\mathbf{Var}[N]$ 不等于逐词方差之和,因为不同词的计数互相牵连(一个位置是 acgt 就不能是 acga)。本节换一个视角,把 $N$ 看成<b>位置对</b>的个数,两个问题一起解决:不枚举词表,$\mathbf E[N]$ 和 $\mathbf{Var}[N]$ 都精确。</p>
+
+<h3>B7.1 $N$ 是"窗口相同的位置对"的个数</h3>
+<p>记 $W_i=A_iA_{i+1}\cdots A_{i+k-1}$ 为起点 $i$ 处的<b>窗口</b>,即序列在那里露出的长度 $k$ 的词。$X_w$ 就是等于 $w$ 的窗口个数。把所有 $i\ne j$ 的有序位置对按"两个窗口是哪个词"分类:窗口都等于 $w$ 的有序对恰有 $X_w(X_w-1)$ 个(B5.1),两个窗口不同的对不属于任何词。所以</p>
+<div class="eq">$$
+N=\#\{(i,j):\ i\ne j,\ W_i=W_j\}=\sum_{i\ne j}M_{ij},\qquad M_{ij}=\begin{cases}1,&W_i=W_j\\0,&\text{否则}\end{cases} \tag{B28}
+$$</div>
+<p>$N$ 是有序对的个数,无量纲,可以很大。这个写法里没有 $w$:不用问"是哪个词",只问"两个窗口是否一样"。</p>
+
+<h3>B7.2 均值:两个窗口相同的概率</h3>
+<p>$\mathbf E[N]=\sum_{i\ne j}\Pr[W_i=W_j]$。由平稳性这个概率只依赖间距 $d=|i-j|$,记</p>
+<div class="eq">$$
+q(d)=\Pr[W_i=W_{i+d}],\qquad \mathbf E[N]=2\sum_{d=1}^{\tilde n-1}(\tilde n-d)\,q(d) \tag{B29}
+$$</div>
+<p>与 B3 对照,$q(d)=\sum_w\mu_d(w)$:它把所有词的 $\mu_d$ 一次加完。算它要用一个新的量:</p>
+<div class="eq">$$
+S(m)=\sum_{a\in\mathcal A}p_a^{\,m},\qquad c=S(2) \tag{B30}
+$$</div>
+<p>$S(m)$ 是"独立抽 $m$ 个字母全相同"的概率;$c=S(2)$ 是两个独立字母相同的概率,等概率碱基下 $c=1/4$。$S(1)=1$。</p>
+<ul>
+<li><b>$d\ge k$:</b>两个窗口不共享字母,共 $k$ 对独立的字母要各自相同,$q(d)=c^k$。这也等于 $\sum_w\mu(w)^2$,即 B5 的 $\mu^2$ 项对所有词求和。</li>
+<li><b>$d\lt k$:</b>$W_i=W_{i+d}$ 是 $k$ 条等式 $A_t=A_{t+d}$,$t=i,\dots,i+k-1$。这些等式把涉及的 $k+d$ 个字母连成 $d$ 条链:位置按 $t\bmod d$ 分成 $d$ 类,同一类里的字母必须全相等,不同类之间没有约束。第 $r$ 类有 $n_r$ 个字母(各类大小相差不超过 1,总和 $k+d$),它们全相等的概率是 $S(n_r)$。所以
+$$q(d)=\prod_{r=1}^{d}S(n_r)\qquad(1\le d\le k-1) \tag{B31}$$</li>
+</ul>
+<p>代回 (B29),不重叠段像 B5 一样求和:</p>
+<div class="eq">$$
+\mathbf E[N]=(\tilde n-k)(\tilde n-k+1)\,c^k+2\sum_{d=1}^{k-1}(\tilde n-d)\,q(d) \tag{B32}
+$$</div>
+<div>这就是 (B18) 对全部词求和的结果,但一次算完,不需要知道任何一个词的周期。
+<span class="pop">(悬停看两个例子)
+<span class="popbox">
+<h4>均匀硬币,$n=5$,$k=2$,$\tilde n=4$</h4>
+$c=S(2)=\tfrac12\cdot\tfrac14\cdot2=\tfrac12$。$d=1$:三个字母 $A_iA_{i+1}A_{i+2}$ 连成一条链,全相等,$q(1)=S(3)=2\cdot\tfrac18=\tfrac14$。$d\ge2$:$q=c^2=\tfrac14$。
+$$\mathbf E[N]=(4-2)(4-1)\cdot\tfrac14+2\cdot3\cdot\tfrac14=\tfrac64+\tfrac64=3$$
+逐词核对:B5 算过 HH、HT 的 $\mathbf E[X(X-1)]$ 是 $9/8$、$3/8$,TH、TT 同理,四个加起来 $9/8+3/8+3/8+9/8=3$。一致。
+<hr>
+<h4>碱基 $p_a=p_t=0.3$、$p_c=p_g=0.2$,$k=2$,$\tilde n=5$</h4>
+$c=0.09+0.04+0.04+0.09=0.26$,$S(3)=0.027+0.008+0.008+0.027=0.07$。$q(1)=S(3)=0.07$,$q(d\ge2)=c^2=0.0676$。
+$$\mathbf E[N]=3\cdot4\cdot0.0676+2\cdot4\cdot0.07=0.8112+0.56=1.3712$$
+穷举 $4^6$ 条序列的精确值也是 1.3712。
+</span></span></div>
+
+<h3>B7.3 方差:两对位置的联合概率</h3>
+<p>$N$ 是 $M_{ij}$ 之和,方差还是 B3 那套:所有"一对位置对"的协方差之和。$\mathbf{Cov}[M_{ij},M_{i'j'}]=\Pr[W_i=W_j\text{ 且 }W_{i'}=W_{j'}]-q(|i-j|)\,q(|i'-j'|)$。若四个窗口两两不共享字母(第二对的两个窗口都离第一对的两个窗口至少 $k$ 远),两个事件独立,协方差为 0。所以只需要枚举<b>有窗口重叠</b>的配置。</p>
+<p>联合概率怎么算?两对相同各给出 $k$ 条等式 $A_t=A_{t+d}$ 与 $A_{t'}=A_{t'+d'}$。把每条等式看成一条边,把涉及的字母位置连起来,连通的位置构成一个<b>等价类</b>:类内字母必须全相等,类间无约束。i.i.d. 下</p>
+<div class="eq">$$
+\Pr[W_i=W_j\text{ 且 }W_{i'}=W_{j'}]=\prod_{\text{等价类}}S(|\text{类}|) \tag{B33}
+$$</div>
+<p>这和 (B31) 是同一个原理,(B31) 是只有一对等式时的特例。等价类用并查集合并即可,每个配置 $O(k)$。把第一对固定在 $(0,d)$,第二对是 $(e,e+d')$,配置由 $(d,d',e)$ 决定,四个起点的最大跨度记为 $\text{span}$,序列里放得下它的起点有 $\tilde n-\text{span}$ 个:</p>
+<div class="eq">$$
+\mathbf{Var}[N]=4\sum_{(d,d',e)\ \text{有重叠}}(\tilde n-\text{span})\Big[\prod_{\text{等价类}}S(|\text{类}|)-q(d)\,q(d')\Big] \tag{B34}
+$$</div>
+<div>系数 4 来自 $N=2\sum_{i\lt j}M_{ij}$。有重叠的 $(d,d',e)$ 约有 $\tilde n^2\cdot8k$ 种,直接枚举只适合几百个位置;但下面的性质 (1) 说明不必枚举到基因组长度。
+<span class="pop">(悬停看硬币例子与逐词方差的对照)
+<span class="popbox">
+<h4>均匀硬币,$n=5$,$k=2$</h4>
+按 (B34) 算出 $\mathbf{Var}[N]=8$;穷举 32 种结果直接算也是 8。<br>
+逐词方差(B6 弹窗):HH、TT 各 $399/64$,HT、TH 各 $39/64$,四个加起来 $876/64=13.69$。<b>$\mathbf{Var}[N]=8$ 不等于逐词方差之和 13.69</b>,差的是词与词之间的协方差。这个例子里协方差是负的:HH 多了 HT 就少了,两个字母的字母表太小。
+<hr>
+<h4>碱基,$k=8$,稀疏区(题外话 5.3 的模拟)</h4>
+$p=(0.3,0.2,0.2,0.3)$,$\tilde n=150$:精确 $\mathbf E[N]=0.479$、$\mathbf{Var}[N]=1.754$;模拟 0.479、1.747;逐词方差之和只有 1.10。这里跨词协方差是<b>正</b>的,$\mathbf{Var}[N]$ 比逐词之和大六成。来源:若 $W_i=W_j$,则 $W_{i+1}$ 与 $W_{j+1}$ 已共享 $k-1$ 个相同的字母,再相同的概率是 $c$ 而不是 $c^k$。偶然的配对沿"对角线"成串,串长几何分布,一串里的配对属于不同的词,逐词算看不见它们之间的相关。
+</span></span></div>
+
+<h3>B7.4 三个性质</h3>
+<ol>
+<li><b>$\mathbf{Var}[N]$ 是 $\tilde n$ 的三次多项式。</b>(B34) 里每个配置的联合概率只依赖相对位置,重数 $\tilde n-\text{span}$ 是 $\tilde n$ 的一次式;配置按"两对共享几个窗口"分层,共享一个窗口的配置有 $O(\tilde n^2)$ 种,乘上重数得 $\tilde n^3$。所以用四个小 $\tilde n$ 的精确值定出三次多项式的系数,任何长度直接代入。$\tilde n^3$ 的系数正比于 $S(3)^k-c^{2k}$,由 Cauchy–Schwarz 它不小于 0,等概率字母时恰为 0,那时 $\mathbf{Var}[N]$ 只是二次的。</li>
+<li><b>与字母表大小无关。</b>字母表只通过 $S(m)$ 进入。20 个字母的蛋白质序列用同一套公式,只是 $c$ 小得多(约 0.06),$k$ 要取小。</li>
+<li><b>模糊符号。</b>序列里的 N(碱基)或 B、Z、X(氨基酸)不是第五个字母,也不该匹配任意字母。做法是把含模糊符号的窗口整个屏蔽:$N$ 只数有效窗口之间的配对,(B29)(B34) 的公式不变,重数从 $\tilde n-d$、$\tilde n-\text{span}$ 换成"两个(四个)窗口都有效的起点个数",用位掩码一次算出。前提是模糊符号的位置与序列内容无关。</li>
+</ol>
+<div class="note">
+<b>一个基因组尺度的数。</b>等概率碱基,$k=8$,$c^k=4^{-8}$。用性质 (1) 从 $\tilde n=40,50,60,70$ 外推:$\tilde n=10^6$ 时 $\mathbf E[N]=1.526\times10^7$(几乎就是 $\tilde n^2c^k$),$\mathbf{Var}[N]=5.09\times10^7$,标准差 7131,比值 $\mathbf{Var}[N]/\mathbf E[N]=3.333$,与"对角线成串"模型给的 $2(1+c)/(1-c)$ 完全一致。外推到 $\tilde n=90$ 与直接计算相差在 $10^{-6}$ 以下。
+</div>
+<div class="warn">
+<b>本节验证。</b>脚本 <code>exact_sigma0.py</code>:(1) $n\le10$ 时 (B32)(B34) 与穷举 $4^n$ 条序列的 $\mathbf E[N]$、$\mathbf{Var}[N]$ 在 $10^{-9}$ 相对精度内相等;(2) $k=4,6,8$ 与 6 万次模拟在 1% 内一致;(3) 三次多项式外推与直接计算一致;(4) 蛋白质 20 字母、模糊符号掩码各有模拟对照。<code>b7_check.py</code> 生成本节的硬币、碱基和基因组尺度数字。
+</div>
+
+<h2>B 部分小结</h2>
+<table>
+<tr><th>节</th><th>量</th><th>结果</th><th>用到的核心事实</th></tr>
+<tr><td>B1</td><td>$\mu(w)$</td><td>$\prod_jp_{w_j}$</td><td>字母独立</td></tr>
+<tr><td>B2</td><td>$\mathbf E[X_w]$</td><td>$\tilde n\mu$</td><td>期望的线性性;与重叠无关</td></tr>
+<tr><td>B3</td><td>$\mathbf{Var}[X_w]$</td><td>(B9);$\delta$ 出现</td><td>$d\lt k$ 的位置对用 A2 条件概率</td></tr>
+<tr><td>B4</td><td>$\mathbf E[T_w]$、簇</td><td>$(1+\delta)/\mu$;簇大小几何,延续概率 $a$</td><td>两种方法数同一个期望</td></tr>
+<tr><td>B5</td><td>$\mathbf E[X_w(X_w-1)]$</td><td>(B18);论文 (5)(6) 的适用范围</td><td>有序位置对按间距求和</td></tr>
+<tr><td>B6</td><td>高阶阶乘矩、$\mathbf{Var}[X_w(X_w-1)]$</td><td>生成函数 (B25);三次多项式</td><td>联合概率沿相邻间距因子化</td></tr>
+<tr><td>B7</td><td>$\mathbf E[N]$、$\mathbf{Var}[N]$</td><td>(B32)(B34);不枚举词表</td><td>等价类上 $\prod S(|\text{类}|)$</td></tr>
+</table>
+
+<h2>接下来</h2>
+<p>B 部分的每一步都用到"字母独立"。D 页把背景换成 Markov 链,逐节对照:哪一步只是把 $\prod p_{w_j}$ 换成转移概率的乘积,哪一步多出了新的东西(相距 $\ge k$ 的两个窗口不再独立,协方差按 $Q^{d-k}$ 几何衰减)。E 页再回到统计量:用 B7 的 $\mathbf E[N]$、$\mathbf{Var}[N]$ 构造 $Z=(N-\mathbf E[N])/\sqrt{\mathbf{Var}[N]}$,讨论它的零分布和 D2R 的关系。</p>
 
 </body>
 </html>

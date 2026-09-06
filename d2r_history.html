@@ -35,7 +35,7 @@ td, th { border: 1px solid #ccc; padding: 6px 12px; text-align: left; vertical-a
 <body>
 
 <h1>A. overlapping coefficient 是怎么想出来的</h1>
-<p class="ref"><a href="index.html">词计数的统计学:从一枚硬币到 Markov 链</a> ▸ 本页 A · <a href="d2r_theory.html">B. i.i.d. 理论</a> · <a href="d2r_markov.html">C. 方差闭式与 Markov</a></p>
+<p class="ref"><a href="index.html">词计数的统计学:从一枚硬币到 Markov 链</a> ▸ 本页 A · <a href="d2r_theory.html">B. i.i.d. 理论</a> · <a href="d2r_iid_variance.html">C. 论文处理与方差闭式</a> · <a href="d2r_markov.html">D. Markov</a></p>
 
 <h2>引子:数一个词出现了几次</h2>
 <p>给一段随机字母序列,数某个固定的词出现了几次。这是概率论里最朴素的问题之一:每个位置要么是这个词、要么不是,加起来就是计数。均值一眼就能写出来:位置数乘上单个位置的出现概率。本页只用到这两个记号:词长为 $k$、序列长为 $n$ 时,能放下这个词的位置有 $\tilde n=n-k+1$ 个;任一位置恰好是这个词的概率记作 $\mu(w)$,独立等概率四种碱基下 $\mu(w)=(1/4)^k$。于是期望计数就是 $\tilde n\,\mu(w)$。</p>
@@ -164,7 +164,7 @@ $$</div>
 <tr><td>1994</td><td>Fu &amp; Koutras</td><td>Markov 链嵌入(把模式匹配自动机与序列链做乘积),精确分布的通用方法。</td></tr>
 <tr><td>1995</td><td>Waterman《Introduction to Computational Biology》第 12 章</td><td>教科书化。论文式 (4) 直接引用此处。</td></tr>
 <tr><td>1995</td><td>Prum, Rodolphe &amp; de Turckheim;Schbath</td><td>前者:Markov 模型下的异常词检验,并指出参数由样本估计时方差会变。后者:簇与复合 Poisson 近似,引入主周期。</td></tr>
-<tr><td>1998–2000</td><td>Régnier &amp; Szpankowski;Régnier</td><td>把自相关多项式加上概率权重(i.i.d. 与 Markov 统一),所有矩由同一个生成函数导出。第二页的 $W(z)$ 就是这一框架。</td></tr>
+<tr><td>1998–2000</td><td>Régnier &amp; Szpankowski;Régnier</td><td>把自相关多项式加上概率权重(i.i.d. 与 Markov 统一),所有矩由同一个生成函数导出。C 页的 $W(z)$ 就是这一框架。</td></tr>
 <tr><td>2000</td><td>Reinert, Schbath &amp; Waterman 综述</td><td>集大成:计数、簇数、更新数三种计数方式,精确分布与三种近似,Markov 阶数检验。</td></tr>
 <tr><td>2005</td><td>Lothaire 第 6 章;Robin, Rodolphe &amp; Schbath 专著</td><td>成书。</td></tr>
 <tr><td>2005–2010</td><td>Nuel;Ribeca &amp; Raineri</td><td>用最小 DFA 做最优 Markov 链嵌入,任意模式、任意阶、精确分布,线性时间。</td></tr>
@@ -214,8 +214,8 @@ $$</div>
 <h3>后面几页要做的事</h3>
 <ol>
 <li><b>Part B(i.i.d.,已有大半)</b>:从 $\mu(w)$ 出发,依次推均值、方差(看 $\delta$ 如何出现)、二阶与高阶阶乘矩(用那个按下不表的多项式 $A(z)$),然后用自动机拿到 $X_w$ 的精确分布,再由它得到 $X_w(X_w-1)$ 的分布,并比较 Gaussian、Poisson、复合 Poisson 三种近似各在什么范围可用。</li>
-<li><b>Part C(Markov)</b>:与 Part B 逐节平行,每一节指出哪里换成了条件概率、哪里多了几何衰减项;$m=1$ 全部手写,一般 $m$ 给算法;最后用真实基因组估出的 $m=1,2,3$ 量化与 i.i.d. 的差距。</li>
-<li><b>Part D</b>:参数从同一段序列估计时对方差的影响、阶数 $m$ 怎么选、以及把这些接回具体的统计量。</li>
+<li><b>Part D(Markov)</b>:与 Part B 逐节平行,每一节指出哪里换成了条件概率、哪里多了几何衰减项;$m=1$ 全部手写,一般 $m$ 给算法;最后用真实基因组估出的 $m=1,2,3$ 量化与 i.i.d. 的差距。</li>
+<li><b>Part E</b>:参数从同一段序列估计时对方差的影响、阶数 $m$ 怎么选、以及把这些接回具体的统计量。</li>
 </ol>
 
 <h2>文献</h2>

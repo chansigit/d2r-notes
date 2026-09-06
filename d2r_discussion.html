@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>题外话:D2R 统计量形式的替代方案</title>
+<script>
+MathJax = { tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$']], tags: 'ams' } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+<style>
+body { max-width: 860px; margin: 40px auto; padding: 0 20px; font: 16px/1.8 -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif; color: #222; }
+h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 6px; }
+h2 { font-size: 1.25em; margin-top: 2em; color: #1a4d8f; }
+h3 { font-size: 1.05em; margin-top: 1.5em; }
+.eq { margin: 0.8em 0; }
+.note { background: #f4f6fa; border-left: 4px solid #1a4d8f; padding: 10px 16px; margin: 1em 0; }
+.warn { background: #fdf6e3; border-left: 4px solid #b58900; padding: 10px 16px; margin: 1em 0; }
+.q { background: #f7f7f7; padding: 10px 16px; margin: 1em 0; border-radius: 4px; border-left: 4px solid #888; }
+.pop { position: relative; border-bottom: 1px dotted #1a4d8f; cursor: help; color: #1a4d8f; }
+.pop .popbox { visibility: hidden; opacity: 0; transition: opacity .15s; position: absolute; left: 0; top: 1.6em; z-index: 10;
+  width: 560px; max-width: 90vw; background: #fff; border: 1px solid #999; box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  padding: 12px 16px; font-size: 0.93em; line-height: 1.6; color: #222; text-align: left; border-radius: 4px; }
+.pop:hover .popbox { visibility: visible; opacity: 1; }
+.popbox h4 { margin: 0 0 4px; font-size: 1em; color: #1a4d8f; }
+.popbox hr { border: 0; border-top: 1px solid #ddd; margin: 8px 0; }
+.popbox table { margin: 6px 0; font-size: 0.95em; }
+table { border-collapse: collapse; margin: 1em 0; }
+td, th { border: 1px solid #ccc; padding: 6px 12px; text-align: left; vertical-align: top; }
+.ref { font-size: 0.9em; color: #555; }
+</style>
+</head>
+<body>
+
+<h1>题外话:D2R 统计量形式的替代方案</h1>
+<p class="ref"><a href="index.html">词计数的统计学:从一枚硬币到 Markov 链</a> ▸ 题外话(讨论稿,不属于 A–E 主线)</p>
+
+<p>本页记录一次关于 D2R 统计量形式本身的讨论,是设计层面的想法,不是主线推导。记号沿用 B0:$\tilde n=n-k+1$,$\mu_w=\mu(w)$,$X_w$ 为允许重叠的计数。本页不用阶乘矩记号,统一写 $X_w(X_w-1)$,并给它的均值和标准差起两个短名字:
+$$m_w:=\mathbf E[X_w(X_w-1)],\qquad s_w:=\sqrt{\mathrm{Var}[X_w(X_w-1)]}\,.$$
+记 $c=\sum_a p_a^2$(两个独立位置字母相同的概率),等概率碱基下 $c=1/4$。</p>
+<div class="note">
+<b>本页引用的论文公式</b>(编号沿用论文,与 C 页一致)。D2R 的定义:
+$$
+D_2^R=\frac{\sum_w\big[X_w(X_w-1)-m_w\big]}{\tilde n(\tilde n-1)} \tag{2}
+$$
+i.i.d. 下二阶阶乘矩的精确式($\delta_w$ 为 overlapping coefficient):
+$$
+m_w=(\tilde n^2-2k\tilde n+\tilde n)\,\mu_w^2+2\tilde n\,\delta_w\mu_w \tag{5}
+$$
+论文实际采用的 Poisson 近似:
+$$
+m_w\approx(\tilde n\mu_w)^2 \tag{6}
+$$
+下文说"式 (2)"指的是分子取 $\sum_w[X_w(X_w-1)-m_w]$ 这个形式。
+</div>
+
+<div class="q">
+<b>问题一。</b>D2R 的思路是枚举 $w$,对 $X_w(X_w-1)$ 求和,再减去均值。实际实现时用的是"校正掉背景"的 $X_w$($D_2^*$ 论文里说有助于扣掉背景)。能不能先求和,然后在和的意义上去掉背景,而不是求和前逐词去背景?
+</div>
+
+<h2>1. 四种逐词量:原始计数、中心化计数,及各自的逐词缩放版</h2>
+<p>四种做法有同一个骨架:<b>对每个词算一个量 $T_w$,再对所有词求和</b>,$S=\sum_w T_w$。区别只在 $T_w$ 怎么取。</p>
+<table>
+<tr><th></th><th>逐词量 $T_w$</th><th>配对数用哪个计数算</th><th>去背景的方式</th><th>逐词缩放</th><th>说明</th></tr>
+<tr><td><b>1.1 原始计数</b></td><td>$X_w(X_w-1)-m_w$</td><td>原始 $X_w$</td><td>减去 $T_w$ 自己的期望</td><td>无</td><td>论文式 (2) 的分子</td></tr>
+<tr><td><b>1.2 中心化计数</b></td><td>$\tilde X_w(\tilde X_w-1)-\mathbf E[\tilde X_w(\tilde X_w-1)]$,$\tilde X_w=X_w-\tilde n\mu_w$</td><td>中心化 $\tilde X_w$</td><td>先把计数中心化,再减去 $T_w$ 自己的期望(恰好等于 $\mathrm{Var}[X_w]$,见 1.2)</td><td>无</td><td>把 1.1 里的 $X_w$ 换成 $\tilde X_w$</td></tr>
+<tr><td><b>1.3 原始计数,逐词 z 分数</b></td><td>$\dfrac{X_w(X_w-1)-m_w}{s_w}$</td><td>原始 $X_w$</td><td>同 1.1</td><td>除以 $T_w$ 自己的标准差 $s_w$</td><td>1.1 的逐词 z 分数;论文补充材料里放弃的变体</td></tr>
+<tr><td><b>1.4 中心化计数,Pearson 缩放</b></td><td>$\dfrac{\tilde X_w^2}{\mathrm{Var}[X_w]}-1$</td><td>中心化 $\tilde X_w$</td><td>同 1.2(按 $\tilde X_w^2$ 写,求和后相同)</td><td>除以 $\mathrm{Var}[X_w]$,即 Pearson $\chi^2$ 的约定</td><td>1.2 的逐词缩放版;$D_2^*$ 搬到自比较就是它</td></tr>
+</table>
+<p>零假设下四种 $T_w$ 的期望都是 0。1.1 与 1.2 只差"配对数用原始计数还是中心化计数算";1.3、1.4 分别是前两者的逐词缩放版,但缩放的尺度不同:1.3 除以 $T_w$ 自己的标准差(z 分数),1.4 除以 $\mathrm{Var}[X_w]$(Pearson $\chi^2$ 的逐项形式)。所以"$X_w$ 的 z 分数"平方求和是 1.4,而不是 1.3。</p>
+<div class="note">
+<b>$D_2^*$ 到底对应哪一个。</b>$D_2^*=\sum_w\tilde X_w\tilde Y_w\big/\sqrt{\tilde n_X\tilde n_Y\mu_w}$,其中 $\tilde X_w=X_w-\tilde n_X\mu_w$。它不只是中心化,中心化之后还按 Poisson 标准差 $\sqrt{\tilde n\mu_w}$ 逐词缩放。搬到自比较($Y=X$),分子分母合起来就是 $(X_w-\tilde n\mu_w)^2/(\tilde n\mu_w)$,即 1.4(把 $\mathrm{Var}[X_w]$ 用 Poisson 近似 $\tilde n\mu_w$ 代替)。1.2 是只中心化、不缩放的版本。
+</div>
+
+<h3>1.1 原始计数:求和前减、求和后减,是同一个数</h3>
+<p>期望是线性的:</p>
+<div class="eq">$$
+\sum_w\big[X_w(X_w-1)-m_w\big]\;=\;\sum_w X_w(X_w-1)\;-\;\sum_w m_w .
+$$</div>
+<p>左边逐词减再求和,右边先求和再减一个总数 $\sum_w m_w$,两者相等。所以对 1.1 来说,"先求和再去背景"和"逐词去背景再求和"没有区别。</p>
+
+<h3>1.2 中心化计数:与 1.1 不是同一个统计量</h3>
+<p>先说两件小事。(a) 1.2 与 1.1 形式平行:都是一个配对数减去它自己的期望。这里的期望可以直接算出来:$\mathbf E\tilde X_w=0$,所以 $\mathbf E[\tilde X_w(\tilde X_w-1)]=\mathbf E[\tilde X_w^2]-\mathbf E[\tilde X_w]=\mathrm{Var}[X_w]-0=\mathrm{Var}[X_w]$。下文把这个期望写成 $\mathrm{Var}[X_w]$。(b) 对全部 $4^k$ 个词求和时,$\sum_w\tilde X_w=\sum_wX_w-\tilde n\sum_w\mu_w=\tilde n-\tilde n=0$,所以 $\sum_w\tilde X_w(\tilde X_w-1)=\sum_w\tilde X_w^2$,写成哪种都一样;只对出现过的词求和时两者差 $\tilde n\sum_{w\text{ 缺失}}\mu_w$。</p>
+<p>把 $T_w$ 展开:</p>
+<div class="eq">$$
+\tilde X_w(\tilde X_w-1)
+= X_w(X_w-1)\;-\;2\tilde n\mu_w X_w\;+\;\tilde n^2\mu_w^2\;+\;\tilde n\mu_w .
+$$</div>
+<p>对 $w$ 求和后,$\sum_w\tilde n^2\mu_w^2$ 和 $\sum_w\tilde n\mu_w=\tilde n$ 都是常数,可以并进"背景";但 $-2\tilde n\sum_w\mu_wX_w$ 依赖数据,不能提到求和号外面。所以 1.2 不能通过"先求和再减一个数"从 1.1 得到,它是另一个统计量。差别体现在每个词的贡献上(下表用 $\tilde X_w^2$ 写,与 $\tilde X_w(\tilde X_w-1)$ 求和后相同):</p>
+<table>
+<tr><th>一个词出现 $x$ 次</th><th>1.1:$x(x-1)-m_w$</th><th>1.2(按 $\tilde X_w^2$ 写):$(x-\tilde n\mu_w)^2-\mathrm{Var}[X_w]$</th></tr>
+<tr><td>$x$ 远多于预期</td><td>正,约 $x^2-\tilde n^2\mu_w^2$</td><td>正,约 $(x-\tilde n\mu_w)^2$;比左边少 $2\tilde n\mu_w(x-\tilde n\mu_w)$</td></tr>
+<tr><td>$x$ 少于预期</td><td><b>负</b></td><td>偏离超过约一个标准差($(\tilde n\mu_w-x)^2\gt\mathrm{Var}[X_w]$)时为<b>正</b>,否则为负</td></tr>
+<tr><td>$x=0$(缺失)</td><td>$-m_w\lt0$</td><td>$\tilde n^2\mu_w^2-\mathrm{Var}[X_w]\approx\tilde n\mu_w(\tilde n\mu_w-1)$:稀疏区($\tilde n\mu_w\lt1$)为负,密集区为正</td></tr>
+</table>
+<ul>
+<li><b>单侧变双侧。</b>1.1 只奖励"配对数超出预期",少于预期和缺失都是负贡献;1.2 对超过一个标准差的偏离,不论多还是少,都给正贡献,本质上是一个卡方型的拟合优度量,对"成分偏离背景"和"有重复"一视同仁
+<span class="pop">(悬停看数值例子)<span class="popbox">
+<h4>一个词,期望出现 $\lambda_w=\tilde n\mu_w=10$ 次</h4>
+取密集区好看清楚。用 Poisson 近似:$m_w\approx\lambda_w^2=100$,$\mathrm{Var}[X_w]\approx\lambda_w=10$(忽略自重叠)。
+<table>
+<tr><th>实际出现 $x$</th><th>发生了什么</th><th>1.1:$x(x-1)-m_w$</th><th>1.2:$(x-\lambda_w)^2-\mathrm{Var}[X_w]$</th></tr>
+<tr><td>17</td><td>多了 7 次(像有重复)</td><td>$272-100=\mathbf{+172}$</td><td>$49-10=\mathbf{+39}$</td></tr>
+<tr><td>10</td><td>正常</td><td>$90-100=-10$</td><td>$0-10=-10$</td></tr>
+<tr><td>3</td><td>少了 7 次(像成分偏离,如 read 来自 GC 含量不同的区域)</td><td>$6-100=\mathbf{-94}$</td><td>$49-10=\mathbf{+39}$</td></tr>
+<tr><td>0</td><td>缺失</td><td>$0-100=-100$</td><td>$100-10=+90$</td></tr>
+</table>
+<hr>
+1.2 给"多 7 次"和"少 7 次"<b>同样的 +39</b>,给"缺失"甚至 +90:它量的是偏离背景的程度,不问方向。1.1 给 +172 和 −94:只有多出来的配对才加分。<br>
+所以一条 read 若只是碱基组成与背景不同(一批词偏少、另一批偏多),1.2 两边都加分,总分很高;1.1 里偏少的词把偏多的词拉回去一部分,总分反映的是"净超出的配对数"。
+<hr>
+稀疏区($\lambda_w\ll1$)的情况:多数词 $x=0$,1.1 给 $-\lambda_w^2$、1.2 给 $\lambda_w^2-\lambda_w\lt0$,两者都是接近 0 的负数,差别看不出来;差别在密集区和被显著低估的词上才明显。
+</span></span>。以检测重复为目标,1.1 的单侧形式更贴切。</li>
+<li><b>对超出预期的词,1.1 给的分更高</b>,差 $2\tilde n\mu_w(x-\tilde n\mu_w)$。</li>
+</ul>
+
+<div class="warn">
+<b>一个待确认的实现细节。</b>论文算法 1 第 2 步只遍历 HashCount 里<b>出现过的词</b>。若实现也如此,则实际算的是 $\sum_{w\text{ 出现}}[X_w(X_w-1)-(\tilde n\mu_w)^2]$,缺失词的 $-(\tilde n\mu_w)^2$ 没有被减掉,零假设均值不是 0 而是 $+\sum_{w\text{ 缺失}}\mu_w^2$,稀疏区几乎等于 $c^k$($k=8$ 时约 $1.5\times10^{-5}$)。阈值按实现的统计量标定,分类不受影响,但本页关于"零假设均值"和"随长度变化"的讨论取决于实际实现是哪一种。
+</div>
+<h3>1.3 与 1.4:逐词缩放就是重新给词加权</h3>
+<p>1.3 和 1.4 都是逐词缩放,只是尺度不同(1.3 除以 $s_w$,1.4 除以 $\mathrm{Var}[X_w]$)。共同点是:这与"先求和,再把整个和除以一个总标准差"不同:后者只是整体缩放,不改变各词的相对权重;前者给方差小的词更大的权重。稀有词方差小,所以 1.3 抬高稀有词。稀有词正是长 $k$ 时重复信号所在,但也是噪声最大的地方,这解释了该变体在长 $k$ 时不稳。当年 $s_w$ 用的是近似;C 页给了精确的 $s_w$,这个变体值得重做一次。</p>
+
+<div class="note">
+<b>建议一。</b>用 1.1 的形式(单侧,配对意义清楚),但把 $m_w$ 从近似式 (6) 换成精确式 (5)。式 (6) 留下的偏差是
+$$\frac{\mathbf E[\sum_w T_w]}{\tilde n(\tilde n-1)}\approx\frac{2\sum_w\delta_w\mu_w-(2k-1)\sum_w\mu_w^2}{\tilde n}\approx-\frac{(2k-1)\,c^k}{\tilde n}.$$
+等概率碱基、$k=8$、$\tilde n=100$ 时约 $-2.3\times10^{-6}$,而论文里 $k=8$ 的阈值低到 $3\times10^{-6}$,同一量级。这个偏差随 $\tilde n$ 缩小,零假设下 D2R 的均值从负值向 0 爬,本身就是一种"随长度变化"。
+</div>
+
+<div class="q">
+<b>问题二。</b>除以 $\binom{\tilde n}{2}$ 是除以总配对数,是一种归一化。有没有别的方式?观察到 D2R 似乎随序列长度增长而增长,仍受长度影响。
+</div>
+
+<h2>2. 各种归一化下的量级</h2>
+<p>先看分子 $N=\sum_w[X_w(X_w-1)-m_w]$ 在三种情形下的量级。假设稀疏区 $\tilde n\ll4^k$,即多数词出现 0 或 1 次(read 与 $k=7,8$ 的典型情形)。</p>
+<table>
+<tr><th>情形</th><th>$N$ 的量级</th><th>除以 $\tilde n^2$(现行)</th><th>除以 $\tilde n$</th></tr>
+<tr><td>零假设下的标准差</td><td>$\approx\tilde n\,c^{k/2}$</td><td>$c^{k/2}/\tilde n$,随长度<b>减小</b></td><td>$c^{k/2}$,与长度<b>无关</b></td></tr>
+<tr><td>一段长 $L$ 的重复出现 2 份(散布重复,拷贝数固定)</td><td>$\approx2(L-k+1)$,常数</td><td>$\propto1/\tilde n^2$</td><td>$\propto1/\tilde n$</td></tr>
+<tr><td>串联重复填满窗口(单元长 $u$,$c'$ 份,$\tilde n\approx c'u$)</td><td>$\approx u\,c'^2\approx\tilde n^2/u$</td><td>常数 $\approx1/u$</td><td>$\propto\tilde n$</td></tr>
+</table>
+<p>零假设标准差的来历:配对数近似 Poisson,期望 $\binom{\tilde n}{2}\sum_w\mu_w^2\approx\tilde n^2c^k/2$,标准差约为其平方根 $\tilde n\,c^{k/2}/\sqrt2$。</p>
+<div class="note">
+<b>结论。</b>除以 $\binom{\tilde n}{2}$ 只在"串联重复填满窗口"时是自然的,因为只有那时配对数才真的按 $\tilde n^2$ 增长。对拷贝数固定的散布重复,配对数按 $\tilde n$ 线性增长,除以 $\tilde n^2$ 让信号以 $1/\tilde n$ 消失;零假设噪声也在缩,固定阈值因此没有长度不变性。$\binom{\tilde n}{2}$ 是"所有位置两两配对"的极端上界,离典型值差好几个数量级,这也是 D2R 数值集中在 $10^{-3}\sim10^{-6}$ 的原因。
+</div>
+
+<h2>3. "随长度增长"的可能来源</h2>
+<p>按可能性从高到低:</p>
+<ol>
+<li><b>成分异质性(Jensen 效应)。</b>真实序列的碱基组成沿基因组变化。配对期望 $\sum_w\mu_w^2$ 是组成 $p$ 的凸函数:一个窗口若跨越不同组成的区域,真实配对数比"按窗口平均组成算的 i.i.d. 预期"多,差值为正;窗口越大、包含的异质性越多,偏差越大,直到 isochore 尺度才饱和。这与重复无关,是背景模型错了。Markov 背景或分段估计组成可以压下去。</li>
+<li><b>重复家族拷贝数随窗口增长。</b>一个家族在窗口内有 $c'$ 份,配对数 $\propto c'^2$;窗口变大 $c'$ 变大,配对数超线性增长。散布重复密集的基因组会这样。</li>
+<li><b>Poisson 近似的负偏差随 $\tilde n$ 消退</b>(建议一里算的),零假设均值从负向 0 爬。</li>
+<li><b>小 $\tilde n$ 时的偏态。</b>多数短窗口一个配对都没有,D2R 取到最小值 $-\sum_w(\tilde n\mu_w)^2/\tilde n^2\approx-c^k$;窗口变长后配对数的期望才追上来。看中位数会觉得在涨,看均值(用精确期望)则不应该涨。</li>
+</ol>
+
+<h2>4. 可选的归一化</h2>
+<table>
+<tr><th>形式</th><th>零假设下</th><th>对重复的响应</th><th>适合的解释</th></tr>
+<tr><td><b>按 $\tilde n$ 归一</b>:$N/\tilde n$,"每个位置的超额配对数"</td><td>均值 0,标准差 $\approx c^{k/2}$,<b>与长度无关</b></td><td>两份拷贝、覆盖窗口比例 $f$ 的重复给出约 $f$ 量级的信号,与长度无关</td><td>重复密度</td></tr>
+<tr><td><b>观测 / 期望之比</b>:$\sum_wX_w(X_w-1)\big/\sum_w m_w-1$</td><td>0;标准差 $\approx1/(\tilde n\,c^{k/2})$</td><td>超出背景的倍数</td><td>富集倍数,无量纲,不需要选归一化常数</td></tr>
+<tr><td><b>z 分数</b>:$N/\mathrm{sd}_0(N)$</td><td>均值 0、标准差 1,阈值自动适应长度</td><td>以噪声为单位的信号强度</td><td>假设检验</td></tr>
+<tr><td>现行:$N/\tilde n(\tilde n-1)$</td><td>标准差 $\propto1/\tilde n$</td><td>散布重复 $\propto1/\tilde n^2$;串联填满时常数</td><td>串联重复占比</td></tr>
+</table>
+<p>z 分数需要 $\mathrm{sd}_0(N)$,严格算要跨词协方差;可以先用 $\sqrt{\sum_w s_w^2}$ 近似(C 页给了精确的 $s_w$),或者按长度用模拟建一张表。论文的 Q 值方法实际上就是后者。</p>
+
+<div class="note">
+<b>建议二。</b>分子保持 1.1 的形式,$m_w$ 换成精确式 (5);归一化改成 z 分数,或者至少改成按 $\tilde n$ 归一并按长度给阈值表。
+</div>
+
+<h2>5. 推荐形式(汇总)</h2>
+<div class="note">
+<b>结论先行。</b>对词配对数 $X_w(X_w-1)$:
+<ul>
+<li><b>减均值:做,无条件。</b>逐词减去自己的期望 $m_w$(精确式)。先减后加与先加后减等价。</li>
+<li><b>逐词除以标准差:不做</b>(在 D2R 的工作区:read 长几百 bp、$k=7\sim8$、多数词出现 0 或 1 次)。原因见 5.5。密集区(长窗口、小 $k$)是例外,那里逐词标准化反而更好。</li>
+<li><b>整体除以标准差:做。</b>先求和,再把整个和除以零假设下的标准差 $\sigma_0$。不改变词之间的权重,只让阈值跨长度可比。</li>
+</ul>
+一句话:$Z=\sum_w[X_w(X_w-1)-m_w]\big/\sigma_0$,减均值在逐词层面,除标准差在总和层面。
+</div>
+<p>推荐 <b>1.1 的分子 + 整体 z 分数</b>。分子单侧、有"超额配对数"的含义、期望有精确式;缩放放在整体而不是逐词,避免 1.3 把稀疏词的噪声放大;z 分数让阈值自动适应长度。以下全部在 i.i.d. 下,写成"配对数减去自己期望"的去均值形式。</p>
+
+<h3>5.1 逐词去均值配对数(按 1.1,不是 1.2)</h3>
+<div class="eq">$$\tilde P_w := X_w(X_w-1)-m_w,\qquad m_w=\mathbf E[X_w(X_w-1)]$$</div>
+<div class="note">
+<b>为什么这里用 $X_w$ 而不是 $\tilde X_w$。</b>本页有两种"中心化",名字撞了:对<b>计数</b>中心化($\tilde X_w=X_w-\tilde n\mu_w$,再用它算配对数,即 1.2),和对<b>配对数</b>中心化(配对数减去自己的期望 $m_w$,即 1.1)。$\tilde P_w$ 是后者。选 1.1 而不选 1.2 的原因见 1.2 节:用原始计数算配对数,统计量是单侧的,只有"配对数超过预期"才得正分,缺失和偏少的词都是负分;用中心化计数算配对数,偏少的词也会得正分,变成双侧的拟合优度量,对成分偏离和重复不加区分。检测重复要的是单侧。稀疏区两者差别很小(多数词 $X_w\in\{0,1\}$,两种 $T_w$ 都为负),拉开差距的是密集区和被显著低估的词,那正是 1.2 会误报的地方。
+</div>
+<p>$m_w$ 用精确式(有限 $\tilde n$,含边界项;C 页第 2 节):</p>
+<div class="eq">$$m_w=\mu_w^2(\tilde n-k+1)(\tilde n-k)+2\mu_w\sum_{d=1}^{k-1}(\tilde n-d)\,a_w(d),\qquad a_w(d)=\varepsilon_{k-d}(w)\prod_{j=k-d+1}^{k}p_{w_j}$$</div>
+<p>丢掉边界项就是论文式 (5),再丢 $O(\tilde n)$ 项就是式 (6) 的 $(\tilde n\mu_w)^2$。</p>
+
+<h3>5.2 分子</h3>
+<p>对全部 $4^k$ 个词求和,缺失词贡献 $-m_w$:</p>
+<div class="eq">$$N=\sum_w\tilde P_w=\sum_{w\text{ 出现}}X_w(X_w-1)\;-\;\sum_{w}m_w$$</div>
+<p>第二项只依赖 $\tilde n,k,p$,是常数,可预先算好。这样写也自动解决了第 1.2 节警示框里"只遍历出现过的词"的问题。</p>
+<div class="note">
+<b>求和是对什么求的。</b>对 $\mathcal A^k$,即全部 $4^k$ 个<b>不同的词</b>,$X_w$ 是每个词的计数;不是对 $\tilde n$ 个位置求和(那样同一个词出现 3 次会被数 3 遍,得到的是 $\sum_wX_w^2(X_w-1)$)。但对词空间求和的量有一个按<b>位置对</b>的等价写法,这正是它意义清楚的原因:
+$$\sum_{w\in\mathcal A^k}X_w(X_w-1)=\#\{(i,j):i\ne j,\ w_i=w_j\},$$
+即"词相同的有序位置对"的个数($w_i$ 是位置 $i$ 上的词)。期望项也可按位置对写:$\sum_wm_w=\sum_{i\ne j}\Pr[w_i=w_j]$,而 $\Pr[w_i=w_j]$ 只依赖间距 $|i-j|$:间距 $\ge k$ 时等于 $\sum_w\mu_w^2=c^k$;间距 $d\lt k$ 时等于"长 $k+d$ 的一段恰好以 $d$ 为周期"的概率。所以 $\sum_wm_w$ 不必枚举 $4^k$ 个词,按 $k$ 种间距各算一个概率即可,这也绕开了缺失词的问题。
+</div>
+
+<h3>5.3 推荐统计量</h3>
+<div class="eq">$$Z=\frac{N}{\sigma_0},\qquad \sigma_0^2=\mathrm{Var}_0[N]\approx\sum_w s_w^2,\quad s_w^2=\mathrm{Var}[X_w(X_w-1)]$$</div>
+<div class="warn">
+<b>$\sigma_0^2\approx\sum_ws_w^2$ 有多准:低估约六成。</b>i.i.d. 模拟($p=0.3,0.2,0.2,0.3$;脚本 <code>sigma0_check.py</code>):
+<table>
+<tr><th>$k$</th><th>$\tilde n$</th><th>$\mathbf E[N]$ 模拟 / 精确</th><th>$\mathrm{Var}[N]$ 模拟</th><th>$\sum_ws_w^2$</th><th>比值</th></tr>
+<tr><td>4</td><td>57</td><td>14.75 / 14.74</td><td>63.4</td><td>55.7</td><td>1.14</td></tr>
+<tr><td>6</td><td>100</td><td>3.094 / 3.115</td><td>11.8</td><td>7.80</td><td>1.52</td></tr>
+<tr><td>8</td><td>150</td><td>0.479 / 0.479</td><td>1.75</td><td>1.10</td><td>1.59</td></tr>
+</table>
+均值严格吻合,方差被低估。缺的是跨词协方差,来源明确:位置对 $(i,j)$ 的词相同后,$(i+1,j+1)$ 的词共享 $k-1$ 个字母,再相同的概率是 $c=\sum_ap_a^2$(此处 0.26),$(i+2,j+2)$ 为 $c^2$……偶然配对沿对角线成串出现,串长几何分布。按此模型 $\mathrm{Var}[N]/\mathbf E[N]=2(1+c)/(1-c)=3.41$,模拟值 $3.65$,大头对上,余下来自自重叠词的簇。这就是 Lippert–Huang–Waterman 分析 $D_2$ 方差时的"对角线项"。
+<br>所以 $\sum_ws_w^2$ 只是逐词部分。精确的 $\sigma_0^2$ 见下一框。
+</div>
+<div class="note">
+<b>精确 $\sigma_0^2$:不枚举 $\mathcal A^k$,按位置对算。</b>把 $N$ 写成位置对指示变量之和 $N=\sum_{i\ne j}\mathbf 1\{w_i=w_j\}$,它的方差只需要两类概率:
+<ul>
+<li>$\Pr[w_i=w_j]$,只依赖间距 $d=|i-j|$:$d\ge k$ 时为 $c^k$;$d\lt k$ 时是"长 $k+d$ 的串以 $d$ 为周期"的概率,因子化为 $\prod_{r=1}^{d}S(n_r)$,其中 $S(m)=\sum_ap_a^m$,$n_r$ 是周期位置 $r$ 在串中出现的次数。</li>
+<li>$\Pr[w_i=w_j\ \text{且}\ w_{i'}=w_{j'}]$:两条等式约束把涉及的位置分成若干"必须相等"的等价类(并查集合并 $t\sim t+d$、$t\sim t+d'$),i.i.d. 下概率就是 $\prod_{\text{类}}S(|\text{类}|)$。四个窗口互不重叠时两事件独立、协方差为 0,所以只需枚举有重叠的相对偏移 $(d,d',e)$,约 $\tilde n^2\cdot8k$ 种,每种 $O(k)$。</li>
+</ul>
+$$\sigma_0^2=\mathrm{Var}[N]=4\sum_{(d,d',e)}(\tilde n-\text{span})\Big[\Pr[\text{两对同时相同}]-\Pr[d\text{ 对相同}]\Pr[d'\text{ 对相同}]\Big]$$
+脚本 <code>exact_sigma0.py</code>。验证:(1) $n\le10$ 时与 $4^n$ 穷举的 $\mathbf E[N]$、$\mathrm{Var}[N]$ 在 $10^{-9}$ 相对精度内相等;(2) 与上表的模拟值比较:
+<table>
+<tr><th>$k$</th><th>$\tilde n$</th><th>$\mathrm{Var}[N]$ 精确</th><th>模拟</th><th>$\sum_ws_w^2$</th><th>耗时(Python)</th></tr>
+<tr><td>4</td><td>57</td><td>62.95</td><td>63.39</td><td>55.7</td><td>0.5 s</td></tr>
+<tr><td>6</td><td>100</td><td>11.95</td><td>11.84</td><td>7.80</td><td>3 s</td></tr>
+<tr><td>8</td><td>150</td><td>1.754</td><td>1.747</td><td>1.10</td><td>12 s</td></tr>
+</table>
+模拟值与精确值的差在模拟误差(约 1%)内。于是推荐形式 $Z=N/\sigma_0$ 的分子分母都有精确值了。Markov 背景下同一套办法仍可用:等价类的概率换成沿链的转移概率之积(D 页)。
+<br><b>三个顺带的性质。</b>
+(1) $\mathrm{Var}[N]$ 是 $\tilde n$ 的三次多项式(三次项来自共享一个窗口的 $O(\tilde n^3)$ 个配置),用 4 个小 $\tilde n$ 的精确值定出系数后任意长度直接代入;$k=8$ 时 4 次小计算共 1.5 s,代入 $\tilde n=150$ 与直接计算相差 $4\times10^{-10}$。
+(2) 与字母表大小无关:词表只通过 $S(m)=\sum_ap_a^m$ 进入,20 字母的蛋白质背景($k=3,4$)耗时与 DNA 相同,与模拟吻合;区别只在蛋白质的 $c\approx0.06$ 使稀疏更甚,$k$ 要取小。
+(3) 模糊符号(DNA 的 N,蛋白质的 B/Z/X):把含模糊符号的窗口屏蔽掉,$N$ 只数有效窗口间的配对;零模型公式不变,求和范围换成有效位置(位掩码与运算 + popcount 给配置重数)。前提是模糊符号的位置与内容独立。函数 <code>exact_moments_masked</code>:$k=6$、$n=120$、8 个 N,精确 $\mathbf E[N]=1.944$、$\mathrm{Var}[N]=6.99$,模拟 1.931、7.01。不要把 N 当第五个字母(N 串会自相配对),也不要让 N 匹配任意字母(系统性抬高配对数)。
+</div>
+<p>$s_w^2$ 的精确值由阶乘矩给出(C 页第 2 节;$(X)_r=X(X-1)\cdots(X-r+1)$):</p>
+<div class="eq">$$s_w^2=\mathbf E(X_w)_4+4\,\mathbf E(X_w)_3+2\,\mathbf E(X_w)_2-m_w^2$$</div>
+<div class="eq">$$\mathbf E(X_w)_r=r!\,\mu_w\sum_{j=0}^{r-1}\binom{r-1}{j}\mu_w^{\,j}\sum_t\alpha^{(w)}_{r-1-j,\,t}\binom{\tilde n-t-j(k-1)}{j+1}$$</div>
+<p>其中 $\alpha^{(w)}_{r,t}$ 是 $\big(\sum_{d=1}^{k-1}a_w(d)z^d\big)^r$ 中 $z^t$ 的系数(这一处不得不用阶乘矩记号,因为 $s_w^2$ 只有用它才写得下)。不可自重叠的词($a_w\equiv0$)退化为一行:$\mathbf E(X_w)_r=r!\,\mu_w^r\binom{\tilde n-(r-1)(k-1)}{r}$。</p>
+
+<h3>5.4 与 D2R 的关系</h3>
+<div class="eq">$$D_2^R=\frac{N}{\tilde n(\tilde n-1)},\qquad Z=D_2^R\cdot\frac{\tilde n(\tilde n-1)}{\sigma_0}$$</div>
+<p>两者只差一个与长度有关的因子,固定 $\tilde n$ 时排序相同;差别在跨长度时阈值是否可比。</p>
+
+<h3>5.5′ $Z$ 的零分布还受长度影响吗</h3>
+<p>均值和方差不受,这是定义保证的;但<b>分布形状</b>在稀疏区强烈依赖长度。$N$ 是配对数的两倍,稀疏区里它是个小整数,多数 read 为 0:$k=8$、$\tilde n=150$ 时 $Z$ 只能取 $-0.36$($N=0$)、$1.15$($N=2$)、$2.66$($N=4$)这几个值,"$Z>2$"实际就是"至少两个偶然配对"。模拟(脚本 <code>z_tail_check.py</code>,$k=8$,$Z$ 用各长度自己的均值方差标准化):</p>
+<table>
+<tr><th>$\tilde n$</th><th>$\mathbf E[N]$</th><th>$P(N=0)$</th><th>偏度</th><th>$P(Z>2)$</th><th>$P(Z>3)$</th><th>$P(Z>4)$</th></tr>
+<tr><td>100</td><td>0.22</td><td>0.92</td><td>5.9</td><td>0.076</td><td>0.022</td><td>0.022</td></tr>
+<tr><td>150</td><td>0.49</td><td>0.84</td><td>4.6</td><td>0.053</td><td>0.018</td><td>0.018</td></tr>
+<tr><td>300</td><td>1.9</td><td>0.50</td><td>2.1</td><td>0.051</td><td>0.023</td><td>0.004</td></tr>
+<tr><td>600</td><td>7.5</td><td>0.06</td><td>1.0</td><td>0.052</td><td>0.010</td><td>0.002</td></tr>
+<tr><td>1200</td><td>30</td><td>0</td><td>0.5</td><td>0.036</td><td>0.006</td><td>0.0006</td></tr>
+<tr><td>5000</td><td>523</td><td>0</td><td>0.2</td><td>0.029</td><td>0.003</td><td>0.0000</td></tr>
+<tr><td>正态</td><td></td><td></td><td>0</td><td>0.023</td><td>0.0013</td><td>0.00003</td></tr>
+</table>
+<p>$\tilde n\le300$ 时 $Z>3$ 的零假设概率约 2%,是正态值的 15 倍;$\tilde n=100$ 时 $Z>3$ 与 $Z>4$ 概率相同,因为都对应同一个离散事件 $N\ge4$。要到 $\mathbf E[N]$ 上百($k=8$ 时 $\tilde n\gtrsim2500$)$Z$ 才近似正态。</p>
+<div class="note">
+<b>结论。</b>密集区($\mathbf E[N]\gtrsim100$):$Z$ 加固定阈值可用,长度不变性成立。稀疏区(read 场景):$Z$ 只对齐了均值方差,阈值仍要按长度定;正确做法是用 $N$ 的离散零分布算 p 值,要么按 $(\tilde n,k,p)$ 模拟一张表(论文的 Q 值法),要么用"偶然配对沿对角线成串"的复合 Poisson 近似给解析 p 值:$N/2\approx$ 串数 Poisson($\nu$)、串长几何($1-c$),两个参数都已知,$P(N\ge x)$ 有闭式。后者列入计划(E5)。
+</div>
+
+<div class="note">
+<b>两个说明。</b>(1) $\sigma_0^2\approx\sum_ws_w^2$ 忽略了跨词协方差。稀疏区里不同词的配对近似独立,这个近似可用;要更准可按 $(\tilde n,k,p)$ 用零模型模拟一次表来校准 $\sigma_0$,论文的 Q 值方法本质上就是这个。(2) 若不想算 $\sigma_0$,退一步用 $N/\tilde n$("每位置超额配对数"),零假设下标准差 $\approx c^{k/2}/\sqrt2$,与长度无关,可以配固定阈值。
+</div>
+<p>Markov 背景下只需把 $\mu_w$、$a_w(d)$ 换成条件概率版、非重叠段加上 $Q^{d-k}$ 项(D 页),以上形式不变。</p>
+
+<h3>5.5 为什么不逐词除以标准差再求和</h3>
+<p>逐词除以标准差(1.3)是在<b>重新给词加权</b>:$T_w=[X_w(X_w-1)-m_w]/s_w$ 相当于给 1.1 的每一项乘 $1/s_w$。分三层说。</p>
+<ol>
+<li><b>它在做什么。</b>稀疏区里($\lambda_w:=\tilde n\mu_w\ll1$)$s_w\approx\sqrt2\,\lambda_w$,权重 $\propto1/\lambda_w$:词越稀有,它的一个配对值越多分。$\lambda_w=0.01$ 的词偶然出现一次配对($X_w=2$),贡献约 $2/(\sqrt2\times0.01)\approx141$;$\lambda_w=1$ 的词同样一个配对只贡献约 $1.4$。</li>
+<li><b>按线性理论这个加权是对的。</b>若重复的内容随机,重复里每个 k-mer 带来的信号都是"多一个配对",与 $\mu_w$ 无关;噪声是偶然配对,方差 $\propto\lambda_w^2$。线性最优权重 $\propto$ 信号/方差 $\propto1/\lambda_w$,正是 1.3。所以 1.3 是把信号/噪声比最大化的选择。</li>
+<li><b>稀疏区里线性理论失效。</b>上面的最优性依赖"求和后近似正态"。稀疏区里每个 $T_w$ 几乎总是一个接近 0 的负数,偶尔跳到 141 这样的值,分布极度偏斜;$4^k$ 个这样的项相加,和的分布不是正态,而是被少数最稀有词的偶然配对主导的重尾分布。零假设下 $\sum_wT_w$ 忽大忽小,阈值定不住;一段由常见 k-mer 组成的真实重复反而拿不到多少分。密集区($\lambda_w\gg1$)没有这个问题,$T_w\approx(X_w^2-\lambda_w^2)/(2\lambda_w^{3/2})$,中心极限定理成立,1.3 表现好。这与论文补充材料的观察一致:$k$ 短(密集)时有增益,$k$ 长(稀疏)时不稳甚至失效。</li>
+</ol>
+<div class="note">
+<b>本质:每一个配对给多少分。</b>把各统计量都写成"对每个匹配的位置对打分再求和",稀疏区里一个配对的分值是:
+<table>
+<tr><th>统计量</th><th>一个配对的分值</th><th>意思</th></tr>
+<tr><td>1.1</td><td>$1$</td><td>数配对个数</td></tr>
+<tr><td>$D_2^*$ 式权重</td><td>$1/\sqrt{\lambda_w}$</td><td>稀有词的配对算多一些</td></tr>
+<tr><td>1.3(除以 $s_w$)</td><td>$\approx1/\lambda_w$</td><td>稀有词的配对算多很多</td></tr>
+<tr><td>似然比</td><td>$\log(1/\mu_w)$</td><td>"这对是复制来的而非碰巧"的证据量</td></tr>
+</table>
+除以标准差等于选了最陡的权重。后果有两个,第二个是要害:(1) 信号位置变了,1.1 问"总共多了几个配对",1.3 问"有没有稀有词配上对",由常见 k-mer 组成的重复在 1.3 下看不见;(2) 零分布的尾巴变了,逐词标准化只把每项方差拉平到 1,拉不平尾巴,稀有词的项几乎总是 $\approx0$、以概率 $\sim\lambda_w^2$ 跳到 $\sim1/\lambda_w$,四阶矩 $\sim1/\lambda_w^2$ 随 $\lambda_w\to0$ 爆炸,求和后是被最稀有的一两次偶然配对主导的极值型分布,阈值得按极值理论定,用"均值加几个标准差"去卡它就是不稳的来源。
+所以不逐词除以标准差的本质是:<b>保持每个配对权重为 1,让统计量仍是一个计数,零分布近似 Poisson、尾巴可控</b>。稀有词权重过大是这个选择的反面表现。若确实想让稀有词多算一点,似然比给的 $\log(1/\mu_w)$ 才是有依据的尺度,它比 $1/\lambda_w$ 温和得多。
+</div>
+<div class="warn">
+<b>"稀有词配对不正是重复的证据吗?"</b> 方向对,尺度错。
+<ol>
+<li><b>一个配对值多少证据。</b>位置 $i,j$ 的词相同:零假设下概率 $\mu_w^2$,"$j$ 从 $i$ 复制来"的备择下概率 $\mu_w$,似然比 $1/\mu_w$,证据量 $\log(1/\mu_w)$。稀有词的配对确实该多算,但只多算<b>对数</b>那么多:$k=8$ 时 $\mu_w=10^{-4}$ 的词一个配对值 $9.2$,$\mu_w=10^{-6}$ 的值 $13.8$,差 1.5 倍;$1/s_w\approx1/\lambda_w$ 让它们差 100 倍。</li>
+<li><b>稀有词碰巧配对,在 read 层面并不稀有。</b>单个稀有词配对的概率 $\lambda_w^2/2$ 很小,但这样的词有几万个。组成偏斜的基因组($p=0.4,0.1,0.1,0.4$,$k=8$,$\tilde n=150$)零假设下每条 read 平均约 2 个偶然配对;1.3 给每个上百分,零假设下的统计量本身就是几百且忽大忽小。</li>
+<li><b>一个具体的失败。</b>同一基因组,真重复是一个 30 bp 的 CRISPR 单元出现两次,由 AT 富集的常见词组成($\lambda_w\approx0.05$),1.3 下每个配对 $2/(\sqrt2\times0.05)\approx28$,23 个配对共约 650;同一条 read 里一个 CG 富集的稀有词($\lambda_w=0.001$)偶然配对一次,值 $\approx1414$。一次偶然碰撞赢过一整个真重复。换 1.1:真重复 46,偶然 2;换似然比权重:真重复 $\approx23\times7=160$,偶然 $\approx14$。都分得开。</li>
+<li><b>真重复与偶然的区别是"多"不是"稀"。</b>真重复给出一串连续的配对,偶然碰撞给出孤立的一个。等权计数天然量"多";$\log(1/\mu_w)$ 权重量"多"的同时给"稀"一点加分;$1/\lambda_w$ 权重把"稀"放大到淹没"多"。</li>
+</ol>
+若想利用稀有词的额外证据,该用似然比权重 $\log(1/\mu_w)$,不是 $1/s_w$。
+</div>
+<div class="note">
+<b>折中。</b>$D_2^*$ 的权重 $1/\sqrt{\tilde n\mu_w}$ 介于 1.1(权重 1)和 1.3(权重 $\sim1/\lambda_w$)之间,正是为了缓和这个问题。另一种做法是给 $s_w$ 加下限:$T_w=[X_w(X_w-1)-m_w]/\max(s_w,s_{\min})$,稀有词的权重被封顶。哪种更好取决于重复的 k-mer 相对背景有多稀有,要靠第 6 节的实验来定。推荐 1.1 加整体 z 分数,是在"信号/噪声最优"与"零分布可控"之间选了后者,因为 D2R 的场景在稀疏区。
+</div>
+
+<h2>6. 待做的小实验(未做)</h2>
+<p>把第 3 节的四个来源分开:在 i.i.d. 零假设下取不同 $\tilde n$,分别用近似期望和精确期望算 D2R 的均值、中位数、标准差;再取一段真实序列做同样的事,看曲线差在哪。再比较 1.1、1.3、$D_2^*$ 权重、封顶权重四种在零假设下的分布尾部与对植入重复的检出率。结果出来后补到本页。</p>
+
+</body>
+</html>
