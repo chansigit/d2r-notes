@@ -8,13 +8,22 @@ MathJax = { tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','
 </script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 <style>
-body { max-width: 860px; margin: 40px auto; padding: 0 20px; font: 16px/1.7 -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif; color: #222; }
+body { max-width: 860px; margin: 40px auto; padding: 0 20px; font: 16px/1.8 -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif; color: #222; }
 h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 6px; }
 h2 { font-size: 1.25em; margin-top: 2em; color: #1a4d8f; }
 h3 { font-size: 1.05em; margin-top: 1.5em; }
 .eq { margin: 0.8em 0; }
 .note { background: #f4f6fa; border-left: 4px solid #1a4d8f; padding: 10px 16px; margin: 1em 0; }
 .warn { background: #fdf6e3; border-left: 4px solid #b58900; padding: 10px 16px; margin: 1em 0; }
+.story { background: #f7f7f7; padding: 10px 16px; margin: 1em 0; border-radius: 4px; }
+.pop { position: relative; border-bottom: 1px dotted #1a4d8f; cursor: help; color: #1a4d8f; }
+.pop .popbox { visibility: hidden; opacity: 0; transition: opacity .15s; position: absolute; left: 0; top: 1.6em; z-index: 10;
+  width: 520px; max-width: 90vw; background: #fff; border: 1px solid #999; box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  padding: 12px 16px; font-size: 0.93em; line-height: 1.6; color: #222; text-align: left; border-radius: 4px; }
+.pop:hover .popbox { visibility: visible; opacity: 1; }
+.popbox h4 { margin: 0 0 4px; font-size: 1em; color: #1a4d8f; }
+.popbox .eq { margin: 4px 0; }
+.popbox hr { border: 0; border-top: 1px solid #ddd; margin: 8px 0; }
 code { background: #eee; padding: 1px 5px; border-radius: 3px; font-size: 0.92em; }
 table { border-collapse: collapse; margin: 1em 0; }
 td, th { border: 1px solid #ccc; padding: 6px 12px; text-align: left; vertical-align: top; }
@@ -25,51 +34,305 @@ td, th { border: 1px solid #ccc; padding: 6px 12px; text-align: left; vertical-a
 <body>
 <h1>D. Markov 背景下的词计数理论</h1>
 <p class="ref"><a href="index.html">词计数的统计学:从一枚硬币到 Markov 链</a> ▸ <a href="d2r_history.html">A. 来历</a> · <a href="d2r_theory.html">B. i.i.d. 理论</a> · <a href="d2r_iid_variance.html">C. 论文处理与方差闭式</a> · 本页 D</p>
-<p>本页把 <a href="d2r_iid_variance.html">C 页</a>第 2 节在 i.i.d. 下得到的精确阶乘矩推导,推广到 $m$ 阶 Markov 链。记号沿用 B0 与 C 页。按计划(PLAN.md Part D)本页还会逐节重写,目前只有"高阶阶乘矩"一节是完成的。</p>
-<h2>1. Markov 背景下的精确阶乘矩</h2>
-<p>把背景从 i.i.d. 换成平稳齐次 $m$ 阶 Markov 链:转移概率 $P(x\mid c)$,$c$ 为长度 $m$ 的上下文;上下文链的转移矩阵 $Q$($4^m\times4^m$),平稳分布 $\pi$。<b>假设 $k\ge m$,且窗口从平稳分布出发。</b></p>
 
-<h3>1.1 为什么因子化仍然成立</h3>
-<p>C 页第 2 节的关键是联合出现概率 $P(S)=\mu\prod_r g(d_r)$ 沿相邻间距因子化。在 Markov 下这一点依然成立,原因是<b>同一个词 $w$ 的两次出现之间,Markov 记忆完全由 $w$ 自身提供</b>:第一份 $w$ 结束时的上下文是 $w$ 的末 $m$ 个字母 $c_0=w_{k-m+1}\cdots w_k$,与更早的历史无关(Markov 性)。所以给定 $w$ 出现在 $s_i$,下一次出现在 $s_{i+1}$ 的条件概率只依赖 $d=s_{i+1}-s_i$。</p>
+<h2>引子:把 B 页重做一遍,只换一个假设</h2>
+<p>B 页的每一步都用到"字母独立"。A4 说过真实序列不是这样:C 后面接 G 的频率远低于独立预期,A 后面更容易再接 A。$m$ 阶 Markov 链用"每个字母的概率取决于它前面 $m$ 个字母"来描述这类短程依赖。本页把 B 页逐节重做一遍,每一节都标出两件事:<b>哪里只是把 $\prod p_{w_j}$ 换成条件概率的乘积</b>,<b>哪里多出了 i.i.d. 没有的东西</b>。</p>
+<p>贯穿全页的例子是一枚<b>有记忆的硬币</b>:抛出 H 之后下一次有 $2/3$ 的概率还是 H,抛出 T 之后下一次有 $2/3$ 的概率还是 T。它是 $m=1$、字母表 $\{H,T\}$ 的 Markov 链,所有量都能手算。</p>
 
-<h3>1.2 间距权重 $g(d)$ 在 Markov 下的形式</h3>
-<p>回忆 B6 的记号:$g(d)$ 是"已知位置 $i$ 是 $w$,位置 $i+d$ 也是 $w$"的条件概率,$d$ 是两次出现的起点间距。i.i.d. 下 $d\ge k$ 时它是常数 $\mu$;Markov 下两段都要重算。</p>
+<h2>D0. 模型与记号</h2>
+<p><b>$m$ 阶 Markov 链。</b>序列 $A_1A_2\cdots A_n$ 里每个字母的条件概率只依赖它前面 $m$ 个字母:</p>
 <div class="eq">$$
-\mu(w) = \pi(w_1\cdots w_m)\prod_{j=m+1}^{k}P(w_j\mid w_{j-m}\cdots w_{j-1})
+\Pr[A_i=x\mid A_1\cdots A_{i-1}]=\Pr[A_i=x\mid A_{i-m}\cdots A_{i-1}]=P(x\mid c),\qquad c=A_{i-m}\cdots A_{i-1} \tag{D0}
 $$</div>
-<p><b>重叠间距 $d\lt k$。</b>令 $T=w\cdot w_{k-d+1}\cdots w_k$(两份重叠拼成的长 $k+d$ 字串)。需要 $\varepsilon_{k-d}(w)=1$,权重是延伸出的 $d$ 个字母各自在其前 $m$ 个字母条件下的转移概率之积:</p>
-<div class="eq">$$
-g(d)=\varepsilon_{k-d}(w)\prod_{t=k+1}^{k+d}P\big(T_t\mid T_{t-m}\cdots T_{t-1}\big)
-$$</div>
-<p>i.i.d. 时退化为 $g(d)=\varepsilon_{k-d}\prod_{j>k-d}p_{w_j}$。注意 $k-d\lt m$ 时,前几个延伸字母的上下文会伸进第一份 $w$ 的非重叠部分,所以要按 $T$ 的位置写,而不是按 $w$ 的下标写。</p>
-<p><b>非重叠间距 $d\ge k$。</b>不再是常数 $\mu$:从上下文 $c_0$ 出发走 $d-k$ 步到达上下文 $c$,再从 $c$ 生成整个 $w$:</p>
-<div class="eq">$$
-g(d)=e_{c_0}^{\top}Q^{\,d-k}h,\qquad h_c=\prod_{j=1}^{k}P\big(w_j\mid \text{last}_m(c\,w_1\cdots w_{j-1})\big)
-$$</div>
-<p>$d\to\infty$ 时 $Q^{d-k}\to\mathbf{1}\pi^{\top}$,$g(d)\to\pi^{\top}h=\mu(w)$,以 $Q$ 的第二特征值几何速度收敛。这一项就是 Markov 相对 i.i.d. 多出来的"远程相关"。</p>
-
-<h3>1.3 生成函数恒等式不变</h3>
-<div class="eq">$$
-W(z)=\sum_{d=1}^{k-1}g(d)z^d + z^k\,e_{c_0}^{\top}(I-zQ)^{-1}h,\qquad
-\boxed{\;\mathbf{E}(X_w)_r = r!\,\mu(w)\,[z^{\tilde n-1}]\,\frac{W(z)^{r-1}}{(1-z)^2}\;}
-$$</div>
-<p>$W$ 是有理函数,极点在 $z=1$ 和 $Q$ 的特征值倒数处,所以 $\mathbf{E}(X)_r$ 是"$\tilde n$ 的多项式 + 按特征值几何衰减的修正项"。$m=1$ 时 $Q$ 是 $4\times4$,可以完全手写;一般 $m$ 用数值。实际计算不必求特征值:把 $W(z)$ 截断到 $z^{\tilde n-1}$,做 $r-1$ 次多项式乘法,再与 $1/(1-z)^2$ 卷积(即 $\sum_j(\tilde n-j)[W^{r-1}]_j$),每词 $O(r\tilde n^2)$。$\mathrm{Var}[X_w(X_w-1)]$ 由 C 页第 2 节的阶乘矩恒等式给出。</p>
-
+<p>长度 $m$ 的字串 $c$ 叫<b>上下文</b>。碱基有 $4^m$ 种上下文,每种上下文下四个字母的概率加起来是 1,所以自由参数 $3\cdot4^m$ 个。$m=0$ 时上下文是空串,$P(x\mid\varnothing)=p_x$,就是 i.i.d.。</p>
+<p><b>上下文链。</b>记 $C_i=A_{i-m+1}\cdots A_i$ 为位置 $i$ 结束的上下文。$C_{i+1}$ 由 $C_i$ 去掉第一个字母、加上 $A_{i+1}$ 得到,所以 $C_1,C_2,\dots$ 是 $4^m$ 个状态上的一阶 Markov 链,转移矩阵 $Q$:$Q_{c,c'}=P(x\mid c)$ 若 $c'$ 是 $cx$ 的后 $m$ 个字母,否则为 0。$Q$ 的平稳分布 $\pi$ 满足 $\pi Q=\pi$;$\pi(c)$ 是任一位置的上下文恰好是 $c$ 的概率。</p>
+<p><b>本页的两个假设。</b>(1) 序列从平稳分布出发:第一个上下文按 $\pi$ 抽取,于是每个位置"长得一样"(平稳性),B 页用到平稳性的地方都还能用。(2) 词长 $k\ge m$:词 $w$ 自身就装得下一个完整的上下文,D3 会看到这一点是整套推导能保留的关键。另外假定链不可约、非周期,这样 $\pi$ 唯一,并且 $Q^s\to\mathbf 1\pi$(每一行都趋于 $\pi$),收敛速度由 $Q$ 的第二大特征值 $\lambda_2$ 决定:$|\lambda_2|\lt1$,偏差按 $|\lambda_2|^s$ 衰减。</p>
+<p><b>从序列估计。</b>数出上下文 $c$ 后面接 $x$ 的次数 $N(cx)$,$\hat P(x\mid c)=N(cx)/\sum_yN(cy)$。参数从同一段序列估出来再代回公式对方差的影响,以及 $m$ 怎么选,放在 E 页。</p>
+<table>
+<tr><th>记号</th><th>含义</th><th>说明</th></tr>
+<tr><td>$m$</td><td>链的阶</td><td>每个字母依赖前 $m$ 个字母。</td></tr>
+<tr><td>$c$、$P(x\mid c)$</td><td>上下文、转移概率</td><td>$c$ 长度 $m$。</td></tr>
+<tr><td>$Q$、$\pi$</td><td>上下文链的转移矩阵、平稳分布</td><td>$4^m\times4^m$;$\pi Q=\pi$。</td></tr>
+<tr><td>$\lambda_2$</td><td>$Q$ 的第二大特征值(按模)</td><td>记忆衰减的速度。</td></tr>
+<tr><td>$c_0(w)$</td><td>$w$ 的末 $m$ 个字母</td><td>$w$ 出现后链所处的上下文。D3。</td></tr>
+<tr><td>$h_c(w)$</td><td>从上下文 $c$ 出发生成整个 $w$ 的概率</td><td>D3。</td></tr>
+<tr><td>$\gamma(w)$</td><td>记忆系数</td><td>D3;与 $\delta(w)$ 并列的新量。</td></tr>
+<tr><td>$Z$</td><td>基本矩阵 $(I-Q+\mathbf 1\pi)^{-1}$</td><td>D3;把几何级数一次求和。</td></tr>
+</table>
 <div class="note">
-<b>验证</b>(<code>markov_moments.py</code>,有理数运算):
-(1) $m=0$ 时严格还原 C 页第 2 节的 i.i.d. 闭式;
-(2) $m=1,2$ 下随机转移矩阵,7 个词(aa、aaa、aca、acg、acac、cgcg、aacaa),与 Markov 链下 $4^n$ 穷举得到的 $\mathbf{E}[X(X-1)]$ 和 $\mathrm{Var}[X(X-1)]$ 全部严格相等。
-$\tilde n=144$、$k=7$ 时有理数版每词约 1 秒,浮点版为毫秒级。
+<b>有记忆的硬币。</b>$m=1$,上下文就是上一个字母。$P(H\mid H)=P(T\mid T)=2/3$,$P(T\mid H)=P(H\mid T)=1/3$。
+$$Q=\begin{pmatrix}2/3&1/3\\1/3&2/3\end{pmatrix},\qquad \pi=(\tfrac12,\tfrac12),\qquad
+Q^s=\frac12\begin{pmatrix}1+\lambda^s&1-\lambda^s\\1-\lambda^s&1+\lambda^s\end{pmatrix},\ \lambda=\lambda_2=\tfrac13$$
+长期看 H 和 T 各占一半,与均匀硬币一样;区别全在相邻字母的相关上。$Q^s$ 的公式可以直接验算:$s=1$ 时回到 $Q$,$s\to\infty$ 时每行趋于 $(\tfrac12,\tfrac12)$。
 </div>
 
+<h2>D1. 词频:$\mu(w)$ 变成条件概率的乘积</h2>
+<p>固定起点 $i$,事件"$W_i=w$"按链式法则拆开。前 $m$ 个字母 $w_1\cdots w_m$ 恰好是一个上下文,由平稳性它的概率是 $\pi(w_1\cdots w_m)$;之后每个字母 $w_j$ 以它前面的 $m$ 个字母为条件,而这 $m$ 个字母都在 $w$ 里:</p>
+<div class="eq">$$
+\mu(w)=\Pr[W_i=w]=\pi(w_1\cdots w_m)\prod_{j=m+1}^{k}P\big(w_j\mid w_{j-m}\cdots w_{j-1}\big) \tag{D1}
+$$</div>
+<div>它仍是一个概率,与 $i$ 无关(平稳性),$m=0$ 时回到 (B1)。<b>换的地方</b>:单字母概率换成转移概率。<b>新的地方</b>:$\mu(w)$ 现在依赖字母的<b>顺序</b>。i.i.d. 下 acgt 和 tgca 的 $\mu$ 相同,Markov 下一般不同。
+<span class="pop">(悬停看硬币例子)
+<span class="popbox">
+<h4>有记忆的硬币,$\pi(H)=\pi(T)=1/2$</h4>
+HH:$\mu=\pi(H)P(H\mid H)=\tfrac12\cdot\tfrac23=\tfrac13$。HT:$\mu=\pi(H)P(T\mid H)=\tfrac12\cdot\tfrac13=\tfrac16$。<br>
+HHH:$\tfrac12\cdot\tfrac23\cdot\tfrac23=\tfrac29$。HTH:$\tfrac12\cdot\tfrac13\cdot\tfrac13=\tfrac1{18}$。<br>
+均匀硬币下这四个词的 $\mu$ 是 $\tfrac14,\tfrac14,\tfrac18,\tfrac18$。记忆让"同字母相连"的词变常见,"交替"的词变稀有,差距随词长指数放大。
+</span></span></div>
+
+<h2>D2. 均值:仍是 $\tilde n\mu(w)$</h2>
+<div class="eq">$$
+\mathbf E[X_w]=\sum_{i=1}^{\tilde n}\Pr[W_i=w]=\tilde n\,\mu(w) \tag{D2}
+$$</div>
+<p>B2 的推导只用了期望的线性性和平稳性,一个字都不用改。但结论的味道变了:i.i.d. 下 HH 与 HT 的均值相同、只有方差不同;Markov 下两者的均值就已经不同($\tilde n/3$ 对 $\tilde n/6$),这个差别来自 $\mu$,与重叠无关。<b>比较一个词在两个背景下的期望计数,是 Markov 背景最直接的用处</b>:CpG 缺失的基因组里,含 CG 的词在 $m=1$ 背景下的期望计数自动变低。</p>
+
+<h2>D3. 方差:一处换条件概率,一处是新的</h2>
+
+<h3>D3.1 分解不变</h3>
+<p>B3 的 (B3)(B5) 只用了"和的方差等于协方差之和"与平稳性,照搬:</p>
+<div class="eq">$$
+\mathbf{Var}[X_w]=\tilde n\mu(1-\mu)+2\sum_{d=1}^{\tilde n-1}(\tilde n-d)\big[\mu_d(w)-\mu^2\big],\qquad \mu_d(w)=\mu(w)\,g(d) \tag{D3}
+$$</div>
+<p>$g(d)=\Pr[W_{i+d}=w\mid W_i=w]$ 是 B6 的间距条件概率。它只依赖 $d$ 而不依赖更早的历史,理由要重新说一遍,因为现在字母之间有依赖:已知 $W_i=w$,窗口结束时的上下文是 $w$ 的末 $m$ 个字母 $c_0(w)$(这里用到 $k\ge m$);Markov 性说窗口之后的一切只通过 $c_0$ 依赖过去,而 $c_0$ 由 $w$ 决定,与位置 $i$ 之前发生过什么无关。所以 $g(d)$ 是 $w$ 和 $d$ 的函数。</p>
+
+<h3>D3.2 重叠段 $d\lt k$:换成条件概率</h3>
+<p>与 B3.3 相同的拆法:位置 $i+d$ 的窗口前 $k-d$ 个字母落在已知区域,能否对上由 border 决定,$\varepsilon_{k-d}(w)$;后 $d$ 个字母是新抽的。新字母不再独立,每个要以它前面 $m$ 个字母为条件。把两份重叠的 $w$ 拼成长 $k+d$ 的字串 $T=w\cdot w_{k-d+1}\cdots w_k$,新字母是 $T_{k+1},\dots,T_{k+d}$,每个的条件都在 $T$ 里:</p>
+<div class="eq">$$
+g(d)=\varepsilon_{k-d}(w)\prod_{t=k+1}^{k+d}P\big(T_t\mid T_{t-m}\cdots T_{t-1}\big)\qquad(1\le d\le k-1) \tag{D4}
+$$</div>
+<p>按 $T$ 的位置写而不按 $w$ 的下标写,是因为 $k-d\lt m$ 时前几个新字母的上下文会伸进第一份 $w$ 的非重叠部分。$m=0$ 时回到 (B7)。overlapping coefficient 的定义不变,只是权重换了:</p>
+<div class="eq">$$
+\delta(w)=\sum_{d=1}^{k-1}g(d) \tag{D5}
+$$</div>
+<p>硬币例子:HH 的 $g(1)=P(H\mid H)=2/3$(均匀硬币是 $1/2$),$\delta=2/3$;HT 没有 border,$\delta=0$。</p>
+
+<h3>D3.3 不重叠段 $d\ge k$:新东西</h3>
+<p>i.i.d. 下两个不共享字母的窗口独立,$g(d)=\mu$,协方差为 0。Markov 下不是。已知 $W_i=w$,链处在上下文 $c_0(w)$;到位置 $i+d$ 的窗口开始之前还要走 $d-k$ 步,走完后的上下文 $c$ 服从 $Q^{d-k}$ 的第 $c_0$ 行;再从 $c$ 出发生成整个 $w$,概率记作</p>
+<div class="eq">$$
+h_c(w)=\prod_{j=1}^{k}P\big(w_j\mid \text{last}_m(c\,w_1\cdots w_{j-1})\big)
+$$</div>
+<p>$\text{last}_m(\cdot)$ 取字串的末 $m$ 个字母。于是</p>
+<div class="eq">$$
+g(d)=\sum_{c}\big(Q^{d-k}\big)_{c_0(w),\,c}\,h_c(w)=e_{c_0}^{\top}Q^{d-k}h\qquad(d\ge k) \tag{D6}
+$$</div>
+<div>$e_{c_0}$ 是在 $c_0$ 处为 1 的单位行向量,$h$ 是按上下文排列的列向量。$d\to\infty$ 时 $Q^{d-k}\to\mathbf 1\pi$,$g(d)\to\sum_c\pi(c)h_c(w)=\mu(w)$:隔得足够远,记忆消失,回到独立。但对有限的 $d$,$g(d)-\mu$ 按 $\lambda_2^{\,d-k}$ 几何衰减而不为零。<b>这是 Markov 相对 i.i.d. 多出来的唯一一种新相关</b>,来源不是字母重叠,而是链的记忆,A4 叫它"记忆重叠"。
+<span class="pop">(悬停看硬币例子)
+<span class="popbox">
+<h4>有记忆的硬币,$k=2$,$Q^s=\tfrac12\begin{pmatrix}1+\lambda^s&1-\lambda^s\\1-\lambda^s&1+\lambda^s\end{pmatrix}$,$\lambda=\tfrac13$</h4>
+<b>HH:</b>$c_0=H$。$h_H=P(H\mid H)P(H\mid H)=\tfrac49$,$h_T=P(H\mid T)P(H\mid H)=\tfrac29$。取 $Q^{d-2}$ 的 H 行与 $h$ 相乘:
+$$g(d)=\tfrac12(1+\lambda^{d-2})\tfrac49+\tfrac12(1-\lambda^{d-2})\tfrac29=\tfrac13+\tfrac19\lambda^{d-2}$$
+$g(2)=\tfrac49$(直接看:HH 后面紧跟 HH 要再抛两个 H,$(\tfrac23)^2$,一致),$g(3)=\tfrac{10}{27}$,$g(4)=\tfrac{28}{81}$,趋于 $\mu=\tfrac13$。$g(d)\gt\mu$:看到 HH 之后,近处再出现 HH 的概率<b>高于</b>平稳水平。<br>
+<b>HT:</b>$c_0=T$。$h_H=P(H\mid H)P(T\mid H)=\tfrac29$,$h_T=P(H\mid T)P(T\mid H)=\tfrac19$。取 T 行:
+$$g(d)=\tfrac12(1-\lambda^{d-2})\tfrac29+\tfrac12(1+\lambda^{d-2})\tfrac19=\tfrac16-\tfrac1{18}\lambda^{d-2}$$
+$g(2)=\tfrac19$,$g(3)=\tfrac4{27}$,趋于 $\mu=\tfrac16$。$g(d)\lt\mu$:HT 结束在 T,之后短期内 H 少,HT 再出现的概率<b>低于</b>平稳水平。记忆相关可正可负。
+</span></span></div>
+
+<h3>D3.4 精确式、记忆系数 $\gamma(w)$、近似式</h3>
+<p>把 (D4)(D6) 代入 (D3):</p>
+<div class="eq">$$
+\mathbf{Var}[X_w]=\tilde n\mu(1-\mu)+2\mu\sum_{d=1}^{k-1}(\tilde n-d)\big[g(d)-\mu\big]+2\mu\sum_{d=k}^{\tilde n-1}(\tilde n-d)\big[g(d)-\mu\big] \tag{D7}
+$$</div>
+<p>这是精确式。与 (B9) 比,第二项只是权重换了,第三项是新的。第三项有 $\tilde n-k$ 项,但每项按 $\lambda_2^{\,d-k}$ 衰减,把它们加起来会得到一个与 $\tilde n$ 无关的数。和 $\delta$ 并列地定义</p>
+<div class="eq">$$
+\gamma(w)=\sum_{d\ge k}\big[g(d)-\mu(w)\big]=e_{c_0}^{\top}\big(Z-\mathbf 1\pi\big)h,\qquad Z=(I-Q+\mathbf 1\pi)^{-1} \tag{D8}
+$$</div>
+<p>$\gamma(w)$ 是什么:已知位置 $i$ 有一个 $w$,它之后所有<b>不重叠</b>位置上 $w$ 的出现个数,比平稳水平多出的期望值。无量纲,可正可负,通常绝对值不大。第二个等号把几何级数一次求和:$Q^s-\mathbf 1\pi=(Q-\mathbf 1\pi)^s$($s\ge1$),等比矩阵级数之和是 $(I-Q+\mathbf 1\pi)^{-1}$ 减去 $s=0$ 项的修正,这个逆矩阵叫链的<b>基本矩阵</b>,Markov 链文献里算各种"总偏差"都用它。</p>
+<p>把 (D7) 里两个和的 $\tilde n-d$ 换成 $\tilde n$(误差不随 $\tilde n$ 增长,与 B3.4 相同),得到与论文式 (4) 平行的近似式:</p>
+<div class="eq">$$
+\mathbf{Var}[X_w]\approx\tilde n\mu\big[1-\mu+2\delta(w)+2\gamma(w)-2(k-1)\mu\big] \tag{D9}
+$$</div>
+<div>与 (B10) 逐项对照:$\delta$ 换了权重,多了 $2\gamma$,其余不变。离散指数 $\mathbf{Var}/\mathbf E\approx1-(2k-1)\mu+2\delta+2\gamma$。
+<span class="pop">(悬停看硬币例子与穷举验算)
+<span class="popbox">
+<h4>有记忆的硬币</h4>
+<table>
+<tr><th>词</th><th>$\mu$</th><th>$\delta$</th><th>$\gamma$</th><th>$\mathbf{Var}/\mathbf E$ 近似 (D9)</th><th>均匀硬币的 $\mathbf{Var}/\mathbf E$</th></tr>
+<tr><td class="mono">HH</td><td>1/3</td><td>2/3</td><td>$\tfrac19\sum_{s\ge0}\lambda^s=\tfrac16$</td><td>$1-\tfrac13+\tfrac43+\tfrac13-\tfrac23=\tfrac53$</td><td>5/4</td></tr>
+<tr><td class="mono">HT</td><td>1/6</td><td>0</td><td>$-\tfrac1{18}\cdot\tfrac32=-\tfrac1{12}$</td><td>$1-\tfrac16+0-\tfrac16-\tfrac13=\tfrac13$</td><td>1/4</td></tr>
+<tr><td class="mono">HHH</td><td>2/9</td><td>10/9</td><td>1/9</td><td>7/3</td><td>—</td></tr>
+<tr><td class="mono">HTH</td><td>1/18</td><td>1/9</td><td>1/36</td><td>1</td><td>—</td></tr>
+</table>
+记忆让 HH 更成簇、HT 更均匀,两个方向都被 $\gamma$ 的符号说中。<br>
+<b>穷举验算。</b>$n=5$,32 种结果各按链算概率(第一个字母 $1/2$,之后逐个乘转移概率),直接算 $\mathbf{Var}[X]$:HH 得 $140/81$,HT 得 $28/81$;按 (D7) 用有理数算也是 $140/81$、$28/81$。$n=6,8$ 同样相等。
+</span></span></div>
+
+<div class="note">
+<b>不重叠段的精确闭式。</b>(D7) 第三项不必逐项加。记 $D=Q-\mathbf 1\pi$、$L=\tilde n-k$,则
+$$\sum_{d=k}^{\tilde n-1}(\tilde n-d)\big[g(d)-\mu\big]=e_{c_0}^{\top}Z\big[L\,I-DZ(I-D^{L})\big]h-L\mu$$
+其中 $D^L$ 按 $|\lambda_2|^L$ 衰减,基因组长度下可以丢掉,于是第三项 $\approx2\mu\big[L\,\gamma(w)-e_{c_0}^{\top}(ZDZ)h+\dots\big]$,是"$\tilde n$ 的一次式加常数"。脚本 <code>d_check.py</code> 对硬币和随机 4 字母链验证了这个闭式与逐项求和相等。
+</div>
 <div class="warn">
-<b>Markov 与 i.i.d. 差多少。</b>用一个人为构造的 2 阶模型(转移行随机),i.i.d. 取其平稳单字母边缘,$n=150$、$k=7$:aaaaaaa 的 $\mathbf{E}[X(X-1)]$ 相差 10 倍,方差相差 17 倍;acacaca、cgcgcgc 相差数百倍。真实基因组的 Markov 结构比这温和,但 CpG 缺失、poly-A 等效应正是通过这些低阶转移体现的,i.i.d. 会把它们误判为重复信号。这也是论文建议改用 BIC 定阶 Markov 链的原因。
+<b>本节验证。</b><code>d_check.py</code>(有理数):有记忆的硬币下 HH、HT、HHH、HTH 在 $n=5,6,8$ 的 $\mathbf E[X]$、$\mathbf{Var}[X]$ 按 (D2)(D7) 计算,与穷举 $2^n$ 条序列逐一相等;随机 $m=1$、$m=2$ 四字母链下 6 个词同样相等;$\gamma$ 的基本矩阵式 (D8) 与级数直接求和一致。
 </div>
-
 <div class="note">
-<b>把 D2R 搬到 Markov 背景需要改的只有一处:</b>C 页式 (7) 里的 $[\tilde n\mu(w)]^2$ 换成 1.3 给出的精确 $\mathbf{E}(X_w)_2$。若进一步做 $D_2^{*}$ 型标准化,每项再除以 $\sqrt{\mathrm{Var}[X_w(X_w-1)]}$。两者都可按 $(w,\tilde n)$ 预计算成表:固定 read 长度时 $4^k$ 个词一次算完。
+<b>$\gamma$ 在真实尺度上有多大。</b>四字母、$m=1$ 的随机链上 aa、acg、aca 的 $\gamma$ 在 $10^{-3}$ 量级,$m=2$ 时更小:上下文只有一两个字母,记忆一两步就衰减掉,而 $\mu$ 本身也小。所以对 DNA 词计数,Markov 的主要影响在 $\mu$(D1)和重叠权重(D4),不在 $\gamma$;但 $\gamma$ 不是零,精确计算时要带上。用真实基因组估出的链量化这一点,放在本页末尾。
 </div>
 
+<h3>D3.5 小结:B3 的哪些步骤变了</h3>
+<table>
+<tr><th>步骤</th><th>i.i.d.(B3)</th><th>Markov(D3)</th></tr>
+<tr><td>方差按位置对分解</td><td>(B3)(B5)</td><td>不变</td></tr>
+<tr><td>$g(d)$ 只依赖 $d$</td><td>字母独立</td><td>Markov 性 + $k\ge m$;记忆由 $w$ 自己提供</td></tr>
+<tr><td>$d\lt k$</td><td>$\varepsilon_{k-d}\prod p_{w_j}$</td><td>$\varepsilon_{k-d}\prod P(T_t\mid\cdot)$,只换权重</td></tr>
+<tr><td>$d\ge k$</td><td>$g=\mu$,协方差 0</td><td>$g=e_{c_0}^\top Q^{d-k}h$,几何衰减到 $\mu$;新增 $\gamma(w)$</td></tr>
+<tr><td>近似式</td><td>$\tilde n\mu[1-\mu+2\delta-2(k-1)\mu]$</td><td>多一项 $2\gamma$</td></tr>
+</table>
+
+<h2>D4. 等待时间与簇:$\gamma$ 再次出现</h2>
+
+<h3>D4.1 首次出现的等待时间</h3>
+<p>$T_w$ 的定义与 B4 相同:从平稳分布出发抛字母,$w$ 第一次完整出现时已抛出的字母个数。B4 的推导是"用两种方法数同一个 $\mathbf E[X_w]$",在 Markov 下逐句检查:</p>
+<ul>
+<li>第一种数法 (D2):$\mathbf E[X_w]=\tilde n\mu$。不变。</li>
+<li>第二种数法按第一次出现分类。设它结束在位置 $s$。之后与它重叠的出现,期望个数是 $\sum_{d\lt k}g(d)=\delta(w)$(D5),只依赖 $s$ 之后的新字母与上下文 $c_0$。<b>变的地方在这里:</b>不重叠的出现(起点 $s+1,\dots,\tilde n$)在 i.i.d. 下每个概率是 $\mu$,现在每个是 $g(d)$,$d$ 是它与第一次出现的起点间距。把 $g(d)$ 写成 $\mu+[g(d)-\mu]$,前一半加起来是 $\mu(\tilde n-s)$,后一半加起来是 $\sum_{d\ge k}[g(d)-\mu]=\gamma(w)$(尾部按几何速度衰减,$n\to\infty$ 时边界项消失,与 B4 相同)。</li>
+</ul>
+<p>于是 $\tilde n\mu=1+\delta+\gamma+\mu(\tilde n-\mathbf E[T_w])$,两边的 $\tilde n\mu$ 相消:</p>
+<div class="eq">$$
+\mathbf E[T_w]=\frac{1+\delta(w)+\gamma(w)}{\mu(w)} \tag{D10}
+$$</div>
+<div>与 (B11) 比多了 $\gamma$:记忆让近处的出现变多($\gamma\gt0$),第一次出现就被推迟得更多;记忆让近处的出现变少($\gamma\lt0$),第一次出现反而提前。
+<span class="pop">(悬停看硬币例子)
+<span class="popbox">
+<h4>有记忆的硬币</h4>
+<table>
+<tr><th>词</th><th>$\mu$</th><th>$\delta$</th><th>$\gamma$</th><th>$\mathbf E[T]$ 按 (D10)</th><th>均匀硬币</th></tr>
+<tr><td class="mono">HH</td><td>1/3</td><td>2/3</td><td>1/6</td><td>$(1+\tfrac23+\tfrac16)\cdot3=5.5$</td><td>6</td></tr>
+<tr><td class="mono">HT</td><td>1/6</td><td>0</td><td>−1/12</td><td>$(1-\tfrac1{12})\cdot6=5.5$</td><td>4</td></tr>
+<tr><td class="mono">THH</td><td>1/9</td><td>0</td><td>−1/18</td><td>8.5</td><td>8</td></tr>
+<tr><td class="mono">HHH</td><td>2/9</td><td>10/9</td><td>1/9</td><td>10</td><td>14</td></tr>
+<tr><td class="mono">HTH</td><td>1/18</td><td>1/9</td><td>1/36</td><td>20.5</td><td>10</td></tr>
+</table>
+HH 和 HT 的等待时间在这枚硬币下恰好相等,都是 5.5:HH 更常见($\mu$ 大一倍)但更成簇,两个效应正好抵消。这是巧合,不是规律。<br>
+<b>验算。</b>把"最近 $k-1$ 个字母"当状态,列 A1 那种状态方程(转移概率按链取),从平稳分布出发解出 $\mathbf E[T]$,五个词都与 (D10) 相等(<code>d4_check.py</code>,有理数)。
+</span></span></div>
+
+<h3>D4.2 簇</h3>
+<p>簇的定义不变(相邻出现起点相距小于 $k$ 就连成一簇)。延续概率 $a(w)=\Pr[\text{之后还有重叠出现}\mid\text{本次出现}]$ 的推理也不变:错位 $d$ 的事件概率是 $g(d)$,倍数周期的事件被更小周期的事件包含,主周期的事件两两不相容,所以</p>
+<div class="eq">$$
+a(w)=\sum_{d\in\text{主周期}(w)}g(d) \tag{D11}
+$$</div>
+<p>只是 $g(d)$ 换成了 (D4) 的 Markov 权重。簇的大小仍是几何分布、均值 $1/(1-a)$:每次延续只看上下文 $c_0$ 之后的新字母,而每次出现后上下文都是同一个 $c_0$。</p>
+<p>B4.3 里"本次出现是簇的第一个"的概率等于 $1-a$,那里的证明用了把序列倒过来读、周期对称。Markov 链倒过来读一般不是同一条链,这个证明用不了,但结论仍成立,理由更简单:每个簇恰有一个第一次出现和一个最后一次出现,所以"是簇首"的出现与"是簇尾"的出现一样多,而"是簇尾"的概率按定义就是 $1-a$。于是簇的期望个数仍是 $\tilde n\mu(1-a)$。</p>
+<div class="note">
+<b>硬币例子。</b>HH:主周期 $\{1\}$,$a=g(1)=P(H\mid H)=2/3$,簇平均大小 3(均匀硬币是 2);HHH:主周期 $\{1\}$,$a=2/3$,同样是 3;HTH:主周期 $\{2\}$,$a=g(2)=P(T\mid H)P(H\mid T)=1/9$。模拟 100 万个字母:HH 的簇平均大小 3.003,$\Pr[\text{大小}\ge3]=0.444$ 对 $a^2=0.444$;每个字母的簇数 0.1107 对 $\mu(1-a)=0.1111$。穷举验证 $a=$ 主周期和、$\Pr[\text{簇首}]=1-a$ 对硬币 7 个词、随机四字母链 $m=1,2$ 的 9 个词全部相等。
+</div>
+
+<h3>D4.3 小结</h3>
+<table>
+<tr><th>量</th><th>i.i.d.(B4)</th><th>Markov(D4)</th></tr>
+<tr><td>$\mathbf E[T_w]$</td><td>$(1+\delta)/\mu$</td><td>$(1+\delta+\gamma)/\mu$</td></tr>
+<tr><td>延续概率 $a$</td><td>主周期上 $\sum\prod p_{w_j}$</td><td>主周期上 $\sum g(d)$,权重换成条件概率</td></tr>
+<tr><td>簇大小</td><td>几何,$1/(1-a)$</td><td>不变</td></tr>
+<tr><td>$\Pr[\text{簇首}\mid\text{出现}]=1-a$</td><td>倒读对称</td><td>簇首与簇尾一样多</td></tr>
+</table>
+
+<h2>D5. 二阶阶乘矩</h2>
+<p>B5 的 (B16)(B17) 只用了"有序位置对按间距求和",不变:</p>
+<div class="eq">$$
+\mathbf E[X_w(X_w-1)]=2\sum_{d=1}^{\tilde n-1}(\tilde n-d)\,\mu_d(w)=2\mu\sum_{d=1}^{\tilde n-1}(\tilde n-d)\,g(d) \tag{D12}
+$$</div>
+<div>重叠段用 (D4),不重叠段用 (D6);后者写成 $\mu+[g(d)-\mu]$,前一半求和得 $(\tilde n-k)(\tilde n-k+1)\mu^2$(与 (B18) 相同),后一半就是 D3.4 方框里的有限和。把 $\tilde n-d$ 换成 $\tilde n$,得到与论文式 (5) 平行的近似式:
+$$\mathbf E[X_w(X_w-1)]\approx(\tilde n^2-2k\tilde n+\tilde n)\,\mu^2+2\tilde n\,\mu\,\big[\delta(w)+\gamma(w)\big] \tag{D13}$$
+与 (B19) 比只多了 $\gamma$。Poisson 近似 $(\tilde n\mu)^2$ 不变,它丢掉的一次项现在是 $2\tilde n\mu(\delta+\gamma)-(2k-1)\tilde n\mu^2$,B5.3 关于适用范围的讨论照搬,只是 $\delta$ 处换成 $\delta+\gamma$。
+<span class="pop">(悬停看硬币例子)
+<span class="popbox">
+<h4>有记忆的硬币,HH,$n=5$,$\tilde n=4$</h4>
+$g(1)=\tfrac23$,$g(2)=\tfrac49$,$g(3)=\tfrac{10}{27}$(D3.3 弹窗)。按 (D12):
+$$\mathbf E[X(X-1)]=2\cdot\tfrac13\big[3\cdot\tfrac23+2\cdot\tfrac49+1\cdot\tfrac{10}{27}\big]=\tfrac23\cdot\tfrac{88}{27}=\tfrac{176}{81}\approx2.17$$
+穷举 32 种结果按链算概率,得到的也是 $176/81$。近似式 (D13) 给 2.67,Poisson 给 1.78:$\tilde n=4$ 太短,两个近似都不准,但方向与 B5 一致((D13) 差的是不随 $\tilde n$ 增长的常数,Poisson 差的是 $2\tilde n\mu(\delta+\gamma)$)。
+</span></span></div>
+
+<h2>D6. 高阶阶乘矩与 $\mathbf{Var}[X_w(X_w-1)]$</h2>
+<p>B6 的三步逐一检查。</p>
+<ul>
+<li><b>因子化 (B22) 仍成立。</b>$m$ 个位置同时是 $w$ 的概率等于 $\mu\prod g(d_r)$,$d_r$ 是相邻间距。理由与 D3.1 相同:每份 $w$ 结束时链处于 $c_0(w)$,下一份的条件概率只通过 $c_0$ 依赖过去,而 $c_0$ 由 $w$ 决定。B6.1 里"第三个窗口能碰到的已知字母全在第二个窗口里"这句话,在 Markov 下要改成"第三个窗口的条件只通过第二份 $w$ 的末 $m$ 个字母进入",结论相同。</li>
+<li><b>阶乘矩 = 位置组联合概率之和 (B23)。</b>纯组合,不变。</li>
+<li><b>生成函数 (B24)(B25)。</b>$W(z)=\sum_{d\ge1}g(d)z^d$ 的定义不变,但 $d\ge k$ 的部分从等比数列 $\mu z^k/(1-z)$ 变成矩阵等比数列:
+$$W(z)=\sum_{d=1}^{k-1}g(d)z^d+z^k\,e_{c_0}^{\top}(I-zQ)^{-1}h \tag{D14}$$
+因为 $\sum_{s\ge0}z^sQ^s=(I-zQ)^{-1}$。阶乘矩仍是
+$$\mathbf E(X_w)_m=m!\,\mu(w)\,[z^{\tilde n-1}]\,\frac{W(z)^{m-1}}{(1-z)^2} \tag{D15}$$
+$\mathbf{Var}[X_w(X_w-1)]$ 仍由 (B26) 拼出。</li>
+</ul>
+<p>$m=0$ 时 $Q=(1)$、$h=\mu$,(D14) 回到 (B24)。<b>结果的形状:</b>(D15) 是有理函数的系数,极点在 $z=1$(来自 $1/(1-z)^2$ 和 $(I-zQ)^{-1}$ 的特征值 1)和 $z=1/\lambda_j$($Q$ 的其余特征值),所以每个阶乘矩是"$\tilde n$ 的多项式 + 按 $\lambda_j^{\tilde n}$ 衰减的修正项",多项式部分的系数由 $\mu$、$k$、$g(d)$($d\lt k$)和基本矩阵 $Z$ 决定。C 页那种完全展开在 Markov 下没有做,因为 E 页要用的是位置对视角的 $\mathbf{Var}[N]$(D7),不是逐词的方差。</p>
+<div class="note">
+<b>怎么算。</b>不必求特征值:把 $W(z)$ 截断到 $z^{\tilde n-1}$($g(d)$ 逐项由 $v\leftarrow vQ$ 递推,$O(\tilde n\cdot4^m)$),做 $m-1$ 次多项式乘法,再与 $1/(1-z)^2$ 卷积(即 $\sum_j(\tilde n-j)[W^{m-1}]_j$)。每个词 $O(m\tilde n^2)$,几千个位置以内直接算;基因组长度下利用"多项式 + 几何衰减"的形状,用几个中等 $\tilde n$ 的精确值定出多项式系数后外推。
+</div>
+<div class="warn">
+<b>本节验证。</b><code>d56_check.py</code>(有理数):有记忆的硬币 HH、HT、HHH、HTH 与随机 $m=1,2$ 四字母链上的 5 个词,按 (D15) 算的四个阶乘矩以及由 (B26) 拼出的 $\mathbf{Var}[X_w(X_w-1)]$,与穷举全部序列逐一相等。<code>markov_moments.py</code> 另用四字母链 $m=1,2$ 的 7 个词做了同样的验证,并确认 $m=0$ 时严格还原 C 页的 i.i.d. 闭式。
+</div>
+
+<h2>D7. 位置对视角:Markov 下的 $\mathbf E[N]$ 与 $\mathbf{Var}[N]$</h2>
+<p>B7 把 $N=\sum_wX_w(X_w-1)$ 看成"窗口相同的有序位置对"的个数,(B28)(B29) 的写法与概率模型无关,照搬。变的是两个概率的算法,以及一条在 i.i.d. 下成立、Markov 下不成立的简化。</p>
+
+<h3>D7.1 什么变了</h3>
+<ul>
+<li><b>两个窗口相同的概率 $q(d)$。</b>i.i.d. 下 $d\lt k$ 时因子化为 $\prod_rS(n_r)$,$d\ge k$ 时是常数 $c^k$。Markov 下两条都不再成立:$d\lt k$ 时"同一类的字母全相等"的概率要沿链算;$d\ge k$ 时两个窗口通过记忆相关,$q(d)$ 随 $d$ 几何地收敛到 $q_\infty=\sum_w\mu(w)^2$,但不等于它。</li>
+<li><b>两对位置的协方差。</b>i.i.d. 下四个窗口两两不共享字母就独立,协方差为 0,(B34) 只需枚举有重叠的配置。Markov 下不共享字母的窗口也通过空隙相关,协方差按 $\lambda_2^{\,\text{空隙}}$ 衰减而不为零,所以所有配置都要算,只是空隙够长以后可以按收敛处理。</li>
+</ul>
+
+<h3>D7.2 一组等式的概率:沿链对等价类求和</h3>
+<p>无论一对还是两对,要算的都是"若干条等式 $A_t=A_{t+d}$ 同时成立"的概率。B7 的办法是把位置并成等价类;Markov 下等价类照样并,但类内字母相同的概率不再是 $S(|\text{类}|)$,而要对每个类的字母取值求和,权重是链的概率。把涉及的位置按连续段分开(段内位置相邻,段与段之间是没有约束的空隙),链的概率写成因子的乘积:</p>
+<div class="eq">$$
+\Pr[\text{等式都成立}]=\sum_{\text{各类的字母取值}}\ \pi(\text{第一段前 }m\text{ 个字母})\prod_{\text{段内 }t}P\big(A_t\mid A_{t-m}\cdots A_{t-1}\big)\prod_{\text{相邻段}}\big(Q^{\,g+m}\big)_{c,\,c'} \tag{D16}
+$$</div>
+<p>最后一个因子把前一段末尾的上下文 $c$ 经过 $g$ 个空隙位置连到后一段开头的上下文 $c'$($g$ 个空隙字母已经对 $Q$ 求和掉了)。等式让不同位置共用同一个求和变量,所以 (D16) 是一个"变量消去"问题:按合适的顺序逐个对变量求和,中间表的大小由约束的交错程度决定。两个窗口的一对等式,或两对等式只共享一个窗口时,中间表很小;两对窗口以不同错位交叠时最费,表的大小是 $4^{|e-e'|}$ 量级。脚本 <code>markov_sigma0.py</code> 用 numpy 的 einsum 做这个求和,对任意 $m$ 通用。</p>
+<div>$m=0$ 时 (D16) 退回每个类独立、每类 $S(|\text{类}|)$,与 B7 完全一致。
+<span class="pop">(悬停看有记忆的硬币)
+<span class="popbox">
+<h4>有记忆的硬币,$k=2$</h4>
+$q(1)$:位置 0、1、2 全相等。$\sum_a\pi(a)P(a\mid a)^2=2\cdot\tfrac12\cdot(\tfrac23)^2=\tfrac49$(均匀硬币 $S(3)=\tfrac14$)。<br>
+$q(d)$,$d\ge2$:$A_0=A_d=a$,$A_1=A_{d+1}=b$,中间 $d-1$ 步由 $Q^{d-1}$ 连接:
+$$q(d)=\sum_{a,b}\pi(a)\,P(b\mid a)^2\,(Q^{d-1})_{b,a}=\tfrac5{18}+\tfrac1{18}\big(\tfrac13\big)^{d-2}$$
+$q(2)=\tfrac13$,$q(3)=\tfrac8{27}$,$q(4)=\tfrac{23}{81}$,趋于 $q_\infty=\sum_w\mu(w)^2=\tfrac19+\tfrac1{36}+\tfrac1{36}+\tfrac19=\tfrac5{18}$。均匀硬币下 $d\ge2$ 时恒为 $c^2=\tfrac14$。记忆让近处的窗口更容易相同。<br>
+$n=5$($\tilde n=4$):$\mathbf E[N]=2[3\cdot\tfrac49+2\cdot\tfrac13+\tfrac8{27}]=\tfrac{124}{27}\approx4.59$(均匀硬币 3);$\mathbf{Var}[N]=\tfrac{12128}{729}\approx16.6$(均匀硬币 8)。两者都与穷举 32 种结果按链算概率的结果相等。
+</span></span></div>
+
+<h3>D7.3 均值与方差</h3>
+<p>均值仍是 (B29):$\mathbf E[N]=2\sum_{d=1}^{\tilde n-1}(\tilde n-d)q(d)$。$q(d)$ 对 $d\lt k$ 用 (D16) 逐个算;$d\ge k$ 时 $q(d)-q_\infty$ 按 $\lambda_2^{\,d-k}$ 衰减,超过 $k+G$ 后取 $q_\infty$,尾部求和有闭式:</p>
+<div class="eq">$$
+\mathbf E[N]=2\sum_{d=1}^{k+G-1}(\tilde n-d)\,q(d)+q_\infty\,(\tilde n-k-G)(\tilde n-k-G+1) \tag{D17}
+$$</div>
+<p>方差沿用 E1.2 的分组:两对的四个起点排序,相邻起点之差 $o$ 精确保留到 $o\lt k+G$,更大的记为"远"并按 $Q^{o-k}\to\mathbf 1\pi$ 处理。与 i.i.d. 的差别只在截断点从 $k$ 挪到 $k+G$,以及每组的协方差用 (D16) 算:</p>
+<div class="eq">$$
+\mathbf{Var}[N]=4\sum_{\text{组}}\binom{M+f}{f+1}\Big[\Pr[\text{两对都相同}]-q(d)\,q(d')\Big],\qquad M=\tilde n-s-f(k+G) \tag{D18}
+$$</div>
+<p>$f$ 是远差的个数,$s$ 是其余差之和。截断的误差按 $\lambda_2^{\,G}$ 衰减,$G$ 取 20 就够;组的个数约 $(k+G)^3$ 乘一个常数,$k=6$、$G=20$ 时 11 万组,表建一次(约 100 秒),之后任意 $\tilde n$ 直接代入。$\tilde n$ 超过 $3(k+G)$ 后所有组的重数都是多项式,$\mathbf{Var}[N]$ 又是 $\tilde n$ 的三次多项式,可以像 B7.4 那样用四点插值。</p>
+
+<h3>D7.4 验证与数值</h3>
+<div class="warn">
+<b>验证</b>(<code>markov_sigma0.py</code>):
+(1) $m=0$ 时 (D16)(D18) 严格还原 B7 的 i.i.d. 结果;
+(2) $m=1$、$m=2$ 的随机四字母链,$n\le9$、$k=2,3,4$,$\mathbf E[N]$、$\mathbf{Var}[N]$ 与穷举 $4^n$ 条序列相等到 $10^{-14}$;有记忆的硬币 $n=5,6,8$ 同样相等;
+(3) 截断组的重数公式:i.i.d. 下截断严格成立,$G=1$ 与不截断的结果相等到 $10^{-15}$;Markov 下误差随 $G$ 衰减:$G=3,5,8,10$ 时相对误差 $5\times10^{-4}$、$5\times10^{-5}$、$5\times10^{-7}$、$1\times10^{-8}$(链的 $\lambda_2=0.30$);
+(4) $k=6$、$m=1$、$\tilde n=100$:精确 $\mathbf E[N]=9.353$、$\mathbf{Var}[N]=80.82$;40 万次模拟 $9.345\pm0.014$、$80.19\pm0.73$;
+(5) 从 $\tilde n=60,70,80,90$ 插值的三次多项式在 $\tilde n=100,150$ 与直接计算相等。
+</div>
+<div class="note">
+<b>Markov 背景改变了多少。</b>同一条随机 $m=1$ 链($\lambda_2=0.30$,字母间依赖较强),$k=6$、$\tilde n=100$:
+<table>
+<tr><th>背景</th><th>$\mathbf E_0[N]$</th><th>$\mathbf{Var}_0[N]$</th><th>$\mathbf{Var}/\mathbf E$</th></tr>
+<tr><td>i.i.d.,取链的平稳字母频率</td><td>3.90</td><td>16.1</td><td>4.1</td></tr>
+<tr><td>$m=1$ 链本身</td><td>9.35</td><td>80.8</td><td>8.6</td></tr>
+</table>
+把这条链的序列用 i.i.d. 零模型去检验,零假设下的配对数会被低估一倍多,方差低估到五分之一,任何阈值都会大量误报。这就是 A4 说的 Markov 背景的用处,在 $N$ 上的具体数字。$m=2$ 的随机链($\lambda_2=0.42$):$\mathbf E[N]$ 精确 9.73,模拟 9.74;$\mathbf{Var}[N]$ 模拟 184,精确表在 $m=2$ 下同样可建,只是每组的求和慢一些,这里没有跑。
+</div>
+<div class="note">
+<b>待做。</b>用真实基因组估出的 $m=1,2,3$ 链量化 $\mathbf E_0[N]$、$\sigma_0$ 与 i.i.d. 的差,看真实的近邻依赖(CpG、同聚物)在 $N$ 上有多大效应。
+</div>
+
+<h2>D 部分小结</h2>
+<table>
+<tr><th>节</th><th>结果</th><th>换权重</th><th>新东西</th></tr>
+<tr><td>D1</td><td>$\mu(w)=\pi(\cdot)\prod P(w_j\mid\cdot)$ (D1)</td><td>是</td><td>$\mu$ 依赖字母顺序</td></tr>
+<tr><td>D2</td><td>$\tilde n\mu$ (D2)</td><td>—</td><td>无</td></tr>
+<tr><td>D3</td><td>(D7)(D9)</td><td>重叠段 (D4)</td><td>记忆系数 $\gamma(w)$ (D8)</td></tr>
+<tr><td>D4</td><td>$\mathbf E[T_w]=(1+\delta+\gamma)/\mu$ (D10);$a(w)$ (D11)</td><td>是</td><td>$\gamma$;簇首概率的新论证</td></tr>
+<tr><td>D5、D6</td><td>(D12)(D13);$W(z)$ 含 $(I-zQ)^{-1}$ (D14)</td><td>是</td><td>阶乘矩 = 多项式 + 几何衰减项</td></tr>
+<tr><td>D7</td><td>(D16)(D17)(D18)</td><td>等价类概率沿链求和</td><td>不共享字母的窗口也相关;按空隙截断</td></tr>
+</table>
+
+<h2>接下来</h2>
+<p>E 页把 B7、D7 的 $\mathbf E_0[N]$、$\sigma_0$ 装进统计量 $Z$,并给出稀疏区的 p 值。本页待做的只有真实基因组的量化一项。</p>
 
 </body>
 </html>
