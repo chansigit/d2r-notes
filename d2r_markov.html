@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>D2R — 方差闭式与 Markov 背景</title>
+<script>
+MathJax = { tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$']], tags: 'ams' } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+<style>
+body { max-width: 860px; margin: 40px auto; padding: 0 20px; font: 16px/1.7 -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif; color: #222; }
+h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 6px; }
+h2 { font-size: 1.25em; margin-top: 2em; color: #1a4d8f; }
+h3 { font-size: 1.05em; margin-top: 1.5em; }
+.eq { margin: 0.8em 0; }
+.note { background: #f4f6fa; border-left: 4px solid #1a4d8f; padding: 10px 16px; margin: 1em 0; }
+.warn { background: #fdf6e3; border-left: 4px solid #b58900; padding: 10px 16px; margin: 1em 0; }
+code { background: #eee; padding: 1px 5px; border-radius: 3px; font-size: 0.92em; }
+table { border-collapse: collapse; margin: 1em 0; }
+td, th { border: 1px solid #ccc; padding: 6px 12px; text-align: left; vertical-align: top; }
+.ref { font-size: 0.9em; color: #555; }
+.mono { font-family: monospace; letter-spacing: 2px; }
+</style>
+</head>
+<body>
+<h1>D2R — $\mathrm{Var}[X_w(X_w-1)]$ 的精确闭式与 Markov 背景</h1>
+<p class="ref"><a href="index.html">词计数的统计学:从一枚硬币到 Markov 链</a> ▸ <a href="d2r_history.html">A. 来历</a> · <a href="d2r_theory.html">B. i.i.d. 理论</a> · 本页 C</p>
+<p>记号沿用第一页:$\tilde n=n-k+1$,$\mu(w)$ 为词出现概率,$\varepsilon_u(w)$ 为前后缀重叠指示,$\delta(w)=\sum_{d=1}^{k-1}\varepsilon_{k-d}(w)\prod_{j>k-d}p_{w_j}$ 为 overlapping coefficient。论文称 $X_w(X_w-1)$ 的方差没有简单闭式,因此不做标准差归一化。本页说明:i.i.d. 下它有精确闭式,且同一套推导可原样推广到 $m$ 阶 Markov 背景。</p>
+<h2>1. $\mathbf{Var}[X_w(X_w-1)]$ 的精确闭式</h2>
+<p><b>第一步:化成阶乘矩。</b>记下降阶乘 $(X)_m = X(X-1)\cdots(X-m+1)$。由恒等式 $(X)_2^2 = (X)_4 + 4(X)_3 + 2(X)_2$ 得</p>
+<div class="eq">$$
+\mathbf{Var}[X_w(X_w-1)] = \mathbf{E}(X_w)_4 + 4\,\mathbf{E}(X_w)_3 + 2\,\mathbf{E}(X_w)_2 - \big[\mathbf{E}(X_w)_2\big]^2
+$$</div>
+<p>所以只需 $X_w$ 的前四阶阶乘矩。</p>
+
+<p><b>第二步:阶乘矩 = 位置子集上的联合出现概率。</b>$\mathbf{E}(X)_m = m!\sum_{|S|=m} P(S)$,$P(S)$ 是 $w$ 在 $S$ 中每个位置都出现的概率。对排好序的 $S=\{s_1\lt\cdots\lt s_m\}$,令间距 $d_r = s_{r+1}-s_r$。由第一页 3.4 节同样的推理(连续重叠副本只需两两相邻一致),联合概率沿间距<b>因子化</b>:</p>
+<div class="eq">$$
+P(S) = \mu(w)\prod_{r=1}^{m-1} g(d_r), \qquad
+g(d) = \begin{cases} a(d) := \varepsilon_{k-d}(w)\displaystyle\prod_{j=k-d+1}^{k} p_{w_j}, & 1\le d\le k-1 \\[6pt] \mu(w), & d\ge k \end{cases}
+$$</div>
+<p>注意 $\sum_{d=1}^{k-1} a(d) = \delta(w)$,即 overlapping coefficient 正是重叠权重 $a(d)$ 的总和。</p>
+
+<p><b>第三步:生成函数把位置求和变成系数提取。</b>令 $A(z)=\sum_{d=1}^{k-1} a(d)z^d$(重叠多项式),$W(z) = A(z) + \mu\,\dfrac{z^k}{1-z}$。间距为 $(d_1,\dots,d_{m-1})$ 的子集有 $\tilde n - \sum d_r$ 个起点,于是</p>
+<div class="eq">$$
+\boxed{\;\mathbf{E}(X_w)_m = m!\,\mu(w)\;[z^{\tilde n-1}]\;\frac{W(z)^{m-1}}{(1-z)^2}\;}
+$$</div>
+<p>$W^{m-1}/(1-z)^2$ 是只在 $z=1$ 有极点的有理函数,所以系数是 $\tilde n$ 的多项式。二项展开 $W^{m-1}$,记 $A(z)^r = \sum_t \alpha_{r,t}z^t$,得到有限和形式:</p>
+<div class="eq">$$
+\mathbf{E}(X_w)_m = m!\,\mu\sum_{j=0}^{m-1}\binom{m-1}{j}\mu^j \sum_t \alpha_{m-1-j,\,t}\,\binom{\tilde n - t - j(k-1)}{j+1}
+$$</div>
+<p>其中 $j$ 是"非重叠间距"的个数,$\alpha_{r,t}$ 是 $r$ 个重叠间距之和为 $t$ 的总权重。$m=2$ 时它给出精确的</p>
+<div class="eq">$$
+\mathbf{E}[X_w(X_w-1)] = \mu^2(\tilde n-k+1)(\tilde n-k) + 2\mu\sum_{d=1}^{k-1}(\tilde n-d)\,a(d)
+$$</div>
+<p>与第一页 3.5 节的精确式一致;论文式 (5) 是它在 $\tilde n\gg k$ 下丢掉 $k(k-1)\mu^2$ 和 $2\mu\sum d\,a(d)$ 后的形式。</p>
+
+<div class="note">
+<b>结论。</b>$\mathbf{Var}[X_w(X_w-1)]$ 是 $\tilde n$ 的四次多项式(首项 $\tilde n^4\mu^4$ 相消,实际 $O(\tilde n^3)$),系数由 $\mu$、$k$ 和重叠多项式 $A(z)$ 在 $z=1$ 处的前三阶导数决定,后者只依赖 $\delta_q := \sum_d d^q a(d)$,$q=0,1,2,3$($\delta_0=\delta$)。给定词后 $O(k)$ 时间可算。所以"没有闭式"不准确,准确的说法是:闭式存在但展开后有几十项,论文选择直接不用它。
+</div>
+
+<h2>2. 完全展开</h2>
+<p>记 $\delta_q = \sum_{d=1}^{k-1} d^q\,a(d)$($\delta_0=\delta(w)$)。把 第 1 节的有限和逐项展开,需要 $r$ 个重叠间距之和的矩 $\sum_t \alpha_{r,t}t^q$,它们是 $\delta_q$ 的多项式:
+$\sum_t\alpha_{r,t} = \delta_0^r$,
+$\sum_t\alpha_{r,t}t = r\delta_0^{r-1}\delta_1$,
+$\sum_t\alpha_{r,t}t^2 = r\delta_0^{r-1}\delta_2 + r(r-1)\delta_0^{r-2}\delta_1^2$,
+$\sum_t\alpha_{r,t}t^3 = r\delta_0^{r-1}\delta_3 + 3r(r-1)\delta_0^{r-2}\delta_1\delta_2 + r(r-1)(r-2)\delta_0^{r-3}\delta_1^3$。
+以下各式由 sympy 自动展开生成,并直接写入本页(未经手抄)。</p>
+<!-- EXPANSION-START -->
+<div class="eq">$$\begin{aligned}\mathbf{E}(X)_2 = \mu^2\tilde n^2  \\ &+ \big[2 \delta_{0} \mu - 2 k \mu^{2} + \mu^{2}\big]\,\tilde n \\ &+ \big[- 2 \delta_{1} \mu + k^{2} \mu^{2} - k \mu^{2}\big]\end{aligned}$$</div>
+<div class="eq">$$\begin{aligned}\mathbf{E}(X)_3 = \mu^3\tilde n^3  \\ &+ \big[6 \delta_{0} \mu^{2} - 6 k \mu^{3} + 3 \mu^{3}\big]\,\tilde n^2 \\ &+ \big[6 \delta_{0}^{2} \mu - 12 \delta_{0} k \mu^{2} + 6 \delta_{0} \mu^{2} - 12 \delta_{1} \mu^{2} \\ &\quad + 12 k^{2} \mu^{3} - 12 k \mu^{3} + 2 \mu^{3}\big]\,\tilde n \\ &+ \big[- 12 \delta_{0} \delta_{1} \mu + 6 \delta_{0} k^{2} \mu^{2} - 6 \delta_{0} k \mu^{2} + 12 \delta_{1} k \mu^{2} \\ &\quad - 6 \delta_{1} \mu^{2} + 6 \delta_{2} \mu^{2} - 8 k^{3} \mu^{3} + 12 k^{2} \mu^{3} \\ &\quad - 4 k \mu^{3}\big]\end{aligned}$$</div>
+<div class="eq">$$\begin{aligned}\mathbf{E}(X)_4 = \mu^4\tilde n^4  \\ &+ \big[12 \delta_{0} \mu^{3} - 12 k \mu^{4} + 6 \mu^{4}\big]\,\tilde n^3 \\ &+ \big[36 \delta_{0}^{2} \mu^{2} - 72 \delta_{0} k \mu^{3} + 36 \delta_{0} \mu^{3} - 36 \delta_{1} \mu^{3} \\ &\quad + 54 k^{2} \mu^{4} - 54 k \mu^{4} + 11 \mu^{4}\big]\,\tilde n^2 \\ &+ \big[24 \delta_{0}^{3} \mu - 72 \delta_{0}^{2} k \mu^{2} + 36 \delta_{0}^{2} \mu^{2} - 144 \delta_{0} \delta_{1} \mu^{2} \\ &\quad + 144 \delta_{0} k^{2} \mu^{3} - 144 \delta_{0} k \mu^{3} + 24 \delta_{0} \mu^{3} + 144 \delta_{1} k \mu^{3} \\ &\quad - 72 \delta_{1} \mu^{3} + 36 \delta_{2} \mu^{3} - 108 k^{3} \mu^{4} + 162 k^{2} \mu^{4} \\ &\quad - 66 k \mu^{4} + 6 \mu^{4}\big]\,\tilde n \\ &+ \big[- 72 \delta_{0}^{2} \delta_{1} \mu + 36 \delta_{0}^{2} k^{2} \mu^{2} - 36 \delta_{0}^{2} k \mu^{2} + 144 \delta_{0} \delta_{1} k \mu^{2} \\ &\quad - 72 \delta_{0} \delta_{1} \mu^{2} + 72 \delta_{0} \delta_{2} \mu^{2} + 72 \delta_{1}^{2} \mu^{2} - 96 \delta_{0} k^{3} \mu^{3} \\ &\quad + 144 \delta_{0} k^{2} \mu^{3} - 48 \delta_{0} k \mu^{3} - 144 \delta_{1} k^{2} \mu^{3} + 144 \delta_{1} k \mu^{3} \\ &\quad - 24 \delta_{1} \mu^{3} - 72 \delta_{2} k \mu^{3} + 36 \delta_{2} \mu^{3} - 12 \delta_{3} \mu^{3} \\ &\quad + 81 k^{4} \mu^{4} - 162 k^{3} \mu^{4} + 99 k^{2} \mu^{4} - 18 k \mu^{4}\big]\end{aligned}$$</div>
+<div class="eq">$$\mathbf{Var}[X_w(X_w-1)] = c_3\tilde n^3 + c_2\tilde n^2 + c_1\tilde n + c_0$$</div>
+<div class="eq">$$\begin{aligned}c_3 &= 8 \delta_{0} \mu^{3} - 8 k \mu^{4} + 4 \mu^{4} + 4 \mu^{3}\end{aligned}$$</div>
+<div class="eq">$$\begin{aligned}c_2 &= 32 \delta_{0}^{2} \mu^{2} - 64 \delta_{0} k \mu^{3} + 32 \delta_{0} \mu^{3} + 24 \delta_{0} \mu^{2} \\ &\quad - 32 \delta_{1} \mu^{3} + 48 k^{2} \mu^{4} - 48 k \mu^{4} - 24 k \mu^{3} \\ &\quad + 10 \mu^{4} + 12 \mu^{3} + 2 \mu^{2}\end{aligned}$$</div>
+<div class="eq">$$\begin{aligned}c_1 &= 24 \delta_{0}^{3} \mu - 72 \delta_{0}^{2} k \mu^{2} + 36 \delta_{0}^{2} \mu^{2} + 24 \delta_{0}^{2} \mu \\ &\quad - 136 \delta_{0} \delta_{1} \mu^{2} + 140 \delta_{0} k^{2} \mu^{3} - 140 \delta_{0} k \mu^{3} - 48 \delta_{0} k \mu^{2} \\ &\quad + 24 \delta_{0} \mu^{3} + 24 \delta_{0} \mu^{2} + 4 \delta_{0} \mu + 136 \delta_{1} k \mu^{3} \\ &\quad - 68 \delta_{1} \mu^{3} - 48 \delta_{1} \mu^{2} + 36 \delta_{2} \mu^{3} - 104 k^{3} \mu^{4} \\ &\quad + 156 k^{2} \mu^{4} + 48 k^{2} \mu^{3} - 64 k \mu^{4} - 48 k \mu^{3} \\ &\quad - 4 k \mu^{2} + 6 \mu^{4} + 8 \mu^{3} + 2 \mu^{2}\end{aligned}$$</div>
+<div class="eq">$$\begin{aligned}c_0 &= - 72 \delta_{0}^{2} \delta_{1} \mu + 36 \delta_{0}^{2} k^{2} \mu^{2} - 36 \delta_{0}^{2} k \mu^{2} + 144 \delta_{0} \delta_{1} k \mu^{2} \\ &\quad - 72 \delta_{0} \delta_{1} \mu^{2} - 48 \delta_{0} \delta_{1} \mu + 72 \delta_{0} \delta_{2} \mu^{2} + 68 \delta_{1}^{2} \mu^{2} \\ &\quad - 96 \delta_{0} k^{3} \mu^{3} + 144 \delta_{0} k^{2} \mu^{3} + 24 \delta_{0} k^{2} \mu^{2} - 48 \delta_{0} k \mu^{3} \\ &\quad - 24 \delta_{0} k \mu^{2} - 140 \delta_{1} k^{2} \mu^{3} + 140 \delta_{1} k \mu^{3} + 48 \delta_{1} k \mu^{2} \\ &\quad - 24 \delta_{1} \mu^{3} - 24 \delta_{1} \mu^{2} - 4 \delta_{1} \mu - 72 \delta_{2} k \mu^{3} \\ &\quad + 36 \delta_{2} \mu^{3} + 24 \delta_{2} \mu^{2} - 12 \delta_{3} \mu^{3} + 80 k^{4} \mu^{4} \\ &\quad - 160 k^{3} \mu^{4} - 32 k^{3} \mu^{3} + 98 k^{2} \mu^{4} + 48 k^{2} \mu^{3} \\ &\quad + 2 k^{2} \mu^{2} - 18 k \mu^{4} - 16 k \mu^{3} - 2 k \mu^{2}\end{aligned}$$</div>
+<!-- EXPANSION-END -->
+<div class="note">
+<b>正确性保证。</b>
+(1) 展开式在 13 个词(含 aa、aaa、aaaa、acac、acacac、aacaa、gtacgt 等各种自重叠结构与不可自重叠词)× 每词 19 个 $n$ 值(从 $n=4k-4$ 起连续 16 个,加 200、5000、123457)共 247 个点上,与第 1 节的精确闭式做<b>有理数严格相等</b>比较,全部通过;而第 1 节的闭式又已与 $4^n$ 穷举严格相等。
+(2) $c_3 = 4\mu^3(1+\mu+2\delta_0-2k\mu)$ 与 delta 方法独立推出的首项 $4\mu^3[1-\mu+2\delta-2(k-1)\mu]$ 恒等。
+(3) 令 $\delta_q\equiv0$,$\mathbf{E}(X)_3$ 退化为 $6\mu^3\binom{\tilde n-2(k-1)}{3}$,与不可自重叠特例一致。
+<b>适用范围:</b>多项式形式对 $\tilde n\ge 3(k-1)$(即 $n\ge 4k-4$)精确;更短的序列里部分二项式系数应为 0 而多项式不为 0,此时用第 1 节的二项式形式。脚本 <code>var_expand.py</code>。
+</div>
+
+<p><b>特例:不能自重叠的词</b>($A\equiv 0$,$\delta=0$)。只剩 $j=m-1$ 一项,极其简洁:</p>
+<div class="eq">$$
+\mathbf{E}(X_w)_m = m!\,\mu^m\binom{\tilde n-(m-1)(k-1)}{m}
+$$</div>
+<div class="eq">$$
+\mathbf{Var}[X_w(X_w-1)] = 24\mu^4\binom{\tilde n-3(k-1)}{4} + 24\mu^3\binom{\tilde n-2(k-1)}{3} + 4\mu^2\binom{\tilde n-(k-1)}{2} - 4\mu^4\binom{\tilde n-(k-1)}{2}^2
+$$</div>
+
+<p><b>渐近简式(delta 方法)。</b>$\tilde n\mu\gg 1$ 时 $X_w$ 近似正态,$\mathbf{Var}[X^2]\approx 4(\mathbf{E}X)^2\mathbf{Var}X$,代入第一页式 (4):</p>
+<div class="eq">$$
+\mathbf{Var}[X_w(X_w-1)] \approx 4\tilde n^3\mu^3\big[1-\mu+2\delta(w)-2(k-1)\mu\big]
+$$</div>
+<div class="warn">
+<b>渐近式只在密集区有效。</b>数值对比(碱基概率 0.3/0.2/0.2/0.3,$k=5$):
+<table>
+<tr><th>词</th><th>$n$</th><th>$\tilde n\mu$</th><th>渐近 / 精确</th></tr>
+<tr><td class="mono">aaaaa</td><td>1 000</td><td>≈ 2.4</td><td>0.46</td></tr>
+<tr><td class="mono">aaaaa</td><td>10 000</td><td>≈ 24</td><td>0.91</td></tr>
+<tr><td class="mono">aaaaa</td><td>100 000</td><td>≈ 240</td><td>0.99</td></tr>
+<tr><td class="mono">acgtc</td><td>1 000</td><td>≈ 0.7</td><td>0.60</td></tr>
+<tr><td class="mono">acgtc</td><td>100 000</td><td>≈ 72</td><td>0.99</td></tr>
+</table>
+$D_2^R$ 的典型工作区(read 长几百 bp,$k=7\sim 8$)恰恰是 $\tilde n\mu\lesssim 1$ 的稀疏区,渐近式偏差可达一倍,此时必须用上面的精确多项式。这也解释了为什么补充材料里"除以标准差"的 $D_2^{*}$ 型变体在 $k$ 长时表现不稳:如果标准差用的是近似,稀疏区的近似误差本身就是噪声源。
+</div>
+
+<p><b>验证。</b>脚本 <code>var_check.py</code>(同目录)用有理数运算实现上述闭式,与 $n\le 10$ 时穷举全部 $4^n$ 条序列得到的精确方差逐一比较,六个词(含 <span class="mono">aaa</span>、<span class="mono">acac</span>、<span class="mono">gtacgt</span> 等不同自重叠结构)全部严格相等;不可自重叠特例公式与一般公式也严格相等。</p>
+
+<h2>3. Markov 背景下的精确阶乘矩</h2>
+<p>把背景从 i.i.d. 换成平稳齐次 $m$ 阶 Markov 链:转移概率 $P(x\mid c)$,$c$ 为长度 $m$ 的上下文;上下文链的转移矩阵 $Q$($4^m\times4^m$),平稳分布 $\pi$。<b>假设 $k\ge m$,且窗口从平稳分布出发。</b></p>
+
+<h3>3.1 为什么因子化仍然成立</h3>
+<p>第 1 节的关键是联合出现概率 $P(S)=\mu\prod_r g(d_r)$ 沿相邻间距因子化。在 Markov 下这一点依然成立,原因是<b>同一个词 $w$ 的两次出现之间,Markov 记忆完全由 $w$ 自身提供</b>:第一份 $w$ 结束时的上下文是 $w$ 的末 $m$ 个字母 $c_0=w_{k-m+1}\cdots w_k$,与更早的历史无关(Markov 性)。所以给定 $w$ 出现在 $s_i$,下一次出现在 $s_{i+1}$ 的条件概率只依赖 $d=s_{i+1}-s_i$。</p>
+
+<h3>3.2 新的 gap 权重</h3>
+<div class="eq">$$
+\mu(w) = \pi(w_1\cdots w_m)\prod_{j=m+1}^{k}P(w_j\mid w_{j-m}\cdots w_{j-1})
+$$</div>
+<p><b>重叠间距 $d\lt k$。</b>令 $T=w\cdot w_{k-d+1}\cdots w_k$(两份重叠拼成的长 $k+d$ 字串)。需要 $\varepsilon_{k-d}(w)=1$,权重是延伸出的 $d$ 个字母各自在其前 $m$ 个字母条件下的转移概率之积:</p>
+<div class="eq">$$
+g(d)=\varepsilon_{k-d}(w)\prod_{t=k+1}^{k+d}P\big(T_t\mid T_{t-m}\cdots T_{t-1}\big)
+$$</div>
+<p>i.i.d. 时退化为 $a(d)=\varepsilon_{k-d}\prod_{j>k-d}p_{w_j}$。注意 $k-d\lt m$ 时,前几个延伸字母的上下文会伸进第一份 $w$ 的非重叠部分,所以要按 $T$ 的位置写,而不是按 $w$ 的下标写。</p>
+<p><b>非重叠间距 $d\ge k$。</b>不再是常数 $\mu$:从上下文 $c_0$ 出发走 $d-k$ 步到达上下文 $c$,再从 $c$ 生成整个 $w$:</p>
+<div class="eq">$$
+g(d)=e_{c_0}^{\top}Q^{\,d-k}h,\qquad h_c=\prod_{j=1}^{k}P\big(w_j\mid \text{last}_m(c\,w_1\cdots w_{j-1})\big)
+$$</div>
+<p>$d\to\infty$ 时 $Q^{d-k}\to\mathbf{1}\pi^{\top}$,$g(d)\to\pi^{\top}h=\mu(w)$,以 $Q$ 的第二特征值几何速度收敛。这一项就是 Markov 相对 i.i.d. 多出来的"远程相关"。</p>
+
+<h3>3.3 生成函数恒等式不变</h3>
+<div class="eq">$$
+W(z)=\sum_{d=1}^{k-1}g(d)z^d + z^k\,e_{c_0}^{\top}(I-zQ)^{-1}h,\qquad
+\boxed{\;\mathbf{E}(X_w)_r = r!\,\mu(w)\,[z^{\tilde n-1}]\,\frac{W(z)^{r-1}}{(1-z)^2}\;}
+$$</div>
+<p>$W$ 是有理函数,极点在 $z=1$ 和 $Q$ 的特征值倒数处,所以 $\mathbf{E}(X)_r$ 是"$\tilde n$ 的多项式 + 按特征值几何衰减的修正项"。$m=1$ 时 $Q$ 是 $4\times4$,可以完全手写;一般 $m$ 用数值。实际计算不必求特征值:把 $W(z)$ 截断到 $z^{\tilde n-1}$,做 $r-1$ 次多项式乘法,再与 $1/(1-z)^2$ 卷积(即 $\sum_j(\tilde n-j)[W^{r-1}]_j$),每词 $O(r\tilde n^2)$。$\mathrm{Var}[X_w(X_w-1)]$ 由 第 1 节的阶乘矩恒等式给出。</p>
+
+<div class="note">
+<b>验证</b>(<code>markov_moments.py</code>,有理数运算):
+(1) $m=0$ 时严格还原第 1 节的 i.i.d. 闭式;
+(2) $m=1,2$ 下随机转移矩阵,7 个词(aa、aaa、aca、acg、acac、cgcg、aacaa),与 Markov 链下 $4^n$ 穷举得到的 $\mathbf{E}[X(X-1)]$ 和 $\mathrm{Var}[X(X-1)]$ 全部严格相等。
+$\tilde n=144$、$k=7$ 时有理数版每词约 1 秒,浮点版为毫秒级。
+</div>
+
+<div class="warn">
+<b>Markov 与 i.i.d. 差多少。</b>用一个人为构造的 2 阶模型(转移行随机),i.i.d. 取其平稳单字母边缘,$n=150$、$k=7$:aaaaaaa 的 $\mathbf{E}[X(X-1)]$ 相差 10 倍,方差相差 17 倍;acacaca、cgcgcgc 相差数百倍。真实基因组的 Markov 结构比这温和,但 CpG 缺失、poly-A 等效应正是通过这些低阶转移体现的,i.i.d. 会把它们误判为重复信号。这也是论文建议改用 BIC 定阶 Markov 链的原因。
+</div>
+
+<div class="note">
+<b>把 D2R 搬到 Markov 背景需要改的只有一处:</b>第一页式 (7) 里的 $[\tilde n\mu(w)]^2$ 换成 3.3 给出的精确 $\mathbf{E}(X_w)_2$。若进一步做 $D_2^{*}$ 型标准化,每项再除以 $\sqrt{\mathrm{Var}[X_w(X_w-1)]}$。两者都可按 $(w,\tilde n)$ 预计算成表:固定 read 长度时 $4^k$ 个词一次算完。
+</div>
+
+</body>
+</html>

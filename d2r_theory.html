@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>D2R 核心理论总结</title>
+<script>
+MathJax = { tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$']], tags: 'ams' } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+<style>
+body { max-width: 860px; margin: 40px auto; padding: 0 20px; font: 16px/1.7 -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif; color: #222; }
+h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 6px; }
+h2 { font-size: 1.25em; margin-top: 2em; color: #1a4d8f; }
+h3 { font-size: 1.05em; margin-top: 1.5em; }
+.eq { margin: 0.8em 0; }
+.note { background: #f4f6fa; border-left: 4px solid #1a4d8f; padding: 10px 16px; margin: 1em 0; }
+.warn { background: #fdf6e3; border-left: 4px solid #b58900; padding: 10px 16px; margin: 1em 0; }
+code { background: #eee; padding: 1px 5px; border-radius: 3px; font-size: 0.92em; }
+table { border-collapse: collapse; margin: 1em 0; }
+td, th { border: 1px solid #ccc; padding: 6px 12px; text-align: left; vertical-align: top; }
+.ref { font-size: 0.9em; color: #555; }
+.mono { font-family: monospace; letter-spacing: 2px; }
+</style>
+</head>
+<body>
+
+<h1>D2R:检测重复序列的新统计量 — 论文理论</h1>
+<p class="ref"><a href="index.html">词计数的统计学:从一枚硬币到 Markov 链</a> ▸ <a href="d2r_history.html">A. 来历</a> · 本页 B · <a href="d2r_markov.html">C. 方差闭式与 Markov</a></p>
+
+<p class="ref">Chen S, Chen Y, Sun F, Waterman MS, Zhang X. <i>A new statistic for efficient detection of repetitive sequences.</i> Bioinformatics 35(22):4596–4606, 2019.
+<a href="https://doi.org/10.1093/bioinformatics/btz262">doi:10.1093/bioinformatics/btz262</a></p>
+
+<h2>1. 从两条序列的相似性到单条序列的重复性</h2>
+<p>D2 统计量是两条序列 k-mer 计数向量的内积,即 k-mer 匹配数:</p>
+<div class="eq">$$ D_2 = \sum_{w \in \mathcal{A}^k} X_w Y_w \tag{1} $$</div>
+<p>搬到单条序列:词 $w$ 出现 $X_w$ 次,则它内部的自匹配数为</p>
+<div class="eq">$$ M(w) = \binom{X_w}{2} = \frac{X_w(X_w-1)}{2} $$</div>
+<p>所有 k-mer 的自匹配总数反映重复程度,且不区分串联重复与散布重复。</p>
+
+<h2>2. D2R 的定义</h2>
+<p>自匹配数减去背景期望,再用 $\tilde n$ 个 k-mer 能形成的最大匹配数 $\binom{\tilde n}{2}$ 归一化:</p>
+<div class="eq">$$
+D_2^R = \frac{\sum_w \{ M(w) - \mathbf{E}[M(w)] \}}{\binom{\tilde n}{2}}
+      = \frac{\sum_w \{ X_w(X_w-1) - \mathbf{E}[X_w(X_w-1)] \}}{\tilde n(\tilde n-1)},
+\qquad \tilde n = n-k+1 \tag{2}
+$$</div>
+<div class="note">
+$X_w \ge 2$ 的词贡献正值并被平方放大;只出现一次的词贡献 $-\mathbf{E}[\cdot]$ 的小负值;不出现的词贡献同样的小负值。
+若期望取精确值,则零模型下 $\mathbf{E}[D_2^R]=0$;有重复时 $D_2^R$ 显著偏正。
+</div>
+
+<h2>3. i.i.d. 背景模型下的推导</h2>
+
+<h3>3.1 设定</h3>
+<p>序列 $A_1 A_2 \cdots A_n$,每个字母独立同分布,$\Pr[A_i = a] = p_a$,$a\in\{a,c,g,t\}$。
+固定词 $w = w_1 w_2 \cdots w_k$,定义位置指示变量</p>
+<div class="eq">$$ \mathbb{I}_i(w) = \mathbf{1}\{ A_i A_{i+1}\cdots A_{i+k-1} = w \}, \qquad i = 1,\dots,\tilde n $$</div>
+<p>由独立性,词出现概率是字母概率之积:</p>
+<div class="eq">$$ \mu(w) = \Pr[\mathbb{I}_i(w)=1] = \prod_{j=1}^{k} p_{w_j} \tag{3} $$</div>
+<p>词计数 $X_w = \sum_{i=1}^{\tilde n} \mathbb{I}_i(w)$ 是 $\tilde n$ 个<b>同分布但不独立</b>的 Bernoulli 变量之和。不独立的原因:相距不到 $k$ 的两个位置共享字母。</p>
+
+<h3>3.2 均值</h3>
+<div class="eq">$$ \mathbf{E}[X_w] = \sum_{i=1}^{\tilde n} \mathbf{E}[\mathbb{I}_i(w)] = \tilde n\,\mu(w) $$</div>
+
+<h3>3.3 方差:分解为对角项与协方差项</h3>
+<div class="eq">$$
+\mathbf{Var}[X_w] = \sum_{i} \mathbf{Var}[\mathbb{I}_i] + 2\sum_{i&lt;j} \mathbf{Cov}[\mathbb{I}_i, \mathbb{I}_j]
+= \tilde n\,\mu(1-\mu) + 2\sum_{d=1}^{\tilde n-1} \sum_{j-i=d} \mathbf{Cov}[\mathbb{I}_i, \mathbb{I}_{i+d}]
+$$</div>
+<p>按间距 $d = j-i$ 分三种情况:</p>
+<table>
+<tr><th>间距</th><th>两个窗口的关系</th><th>$\mathbf{E}[\mathbb{I}_i \mathbb{I}_{i+d}]$</th><th>协方差</th></tr>
+<tr><td>$d \ge k$</td><td>不重叠,字母集合无交,独立</td><td>$\mu^2$</td><td>$0$</td></tr>
+<tr><td>$1 \le d \le k-1$</td><td>重叠 $k-d$ 个字母</td><td>见 3.4</td><td>$\ne 0$</td></tr>
+</table>
+<p>所以只有 $d=1,\dots,k-1$ 这 $k-1$ 种间距有贡献,问题归结为计算重叠情形下的联合概率。</p>
+
+<h3>3.4 重叠情形与 overlapping coefficient $\delta(w)$</h3>
+<p>设 $w$ 同时出现在位置 $i$ 和 $i+d$($1\le d\le k-1$)。两个窗口共享序列位置 $i+d, \dots, i+k-1$,共 $k-d$ 个字母。这些字母在第一个副本中是 $w$ 的<b>后 $k-d$ 个字母</b>(后缀),在第二个副本中是 $w$ 的<b>前 $k-d$ 个字母</b>(前缀)。两个副本同时成立要求二者相同:</p>
+<div class="eq">$$ w_{d+1} w_{d+2} \cdots w_k \;=\; w_1 w_2 \cdots w_{k-d} $$</div>
+<p>定义重叠指示 $\varepsilon_u(w) = 1$ 当且仅当 $w$ 的 $u$ 长前缀等于 $u$ 长后缀。上式即 $\varepsilon_{k-d}(w)=1$。</p>
+<p>若条件满足,事件"两处都是 $w$"等价于"位置 $i$ 起的 $k+d$ 个字母恰为 $w$ 接上 $w$ 的后 $d$ 个字母",概率为</p>
+<div class="eq">$$
+\mathbf{E}[\mathbb{I}_i \mathbb{I}_{i+d}] = \varepsilon_{k-d}(w)\; \mu(w) \prod_{j=k-d+1}^{k} p_{w_j}
+$$</div>
+<p>把 $k-1$ 种间距的"额外字母概率"加起来,就得到论文中的 overlapping coefficient:</p>
+<div class="eq">$$
+\boxed{\;\delta(w) = \sum_{d=1}^{k-1} \varepsilon_{k-d}(w) \prod_{j=k-d+1}^{k} p_{w_j}\;}
+$$</div>
+<p>(论文写作 $\mu(w_j)$,即单字母概率 $p_{w_j}$。)按 $u=k-d$ 重新索引,等价地</p>
+<div class="eq">$$ \delta(w) = \sum_{u=1}^{k-1} \varepsilon_u(w)\, \frac{\mu(w)}{\mu(w_1\cdots w_u)} $$</div>
+<p>即对每个"自重叠长度" $u$,加上"给定已有一个 $w$,紧接着错位 $k-u$ 再出一个 $w$ 需额外付出的概率"。</p>
+
+<div class="note">
+<b>$\delta(w)$ 的含义:</b>一个 $w$ 出现后,它"拖带"出下一个重叠出现的期望次数。$\delta(w)=0$ 表示 $w$ 无法与自身重叠,出现事件近似独立;$\delta(w)$ 大表示 $w$ 倾向于成簇(clump)出现,方差被抬高。
+</div>
+
+<p><b>例子</b>(记 $p_a,p_c,p_g,p_t$):</p>
+<table>
+<tr><th>词 $w$</th><th>哪些 $u$ 满足 $\varepsilon_u=1$</th><th>$\delta(w)$</th></tr>
+<tr><td class="mono">acgt</td><td>无(a≠t,ac≠gt,acg≠cgt)</td><td>$0$</td></tr>
+<tr><td class="mono">gtacgt</td><td>$u=2$:前缀 gt = 后缀 gt(对应 $d=4$)</td><td>$p_a p_c p_g p_t$</td></tr>
+<tr><td class="mono">aaaa</td><td>$u=1,2,3$ 全部</td><td>$p_a + p_a^2 + p_a^3$</td></tr>
+<tr><td class="mono">acac</td><td>$u=2$:ac = ac(对应 $d=2$)</td><td>$p_a p_c$</td></tr>
+</table>
+<p>例:<span class="mono">gtacgt</span> 在 $d=4$ 处自重叠意味着序列中出现 <span class="mono">gtacgtacgt</span>(长 $k+d=10$),在第一个 $w$ 的基础上多付出 <span class="mono">acgt</span> 四个字母的概率。</p>
+
+<h3>3.5 代回方差</h3>
+<p>间距为 $d$ 的位置对共有 $\tilde n - d$ 对。精确地:</p>
+<div class="eq">$$
+\mathbf{Var}[X_w] = \tilde n\,\mu(1-\mu) + 2\sum_{d=1}^{k-1} (\tilde n - d)\Big[\varepsilon_{k-d}(w)\,\mu \prod_{j=k-d+1}^{k} p_{w_j} - \mu^2\Big]
+$$</div>
+<p>当 $\tilde n \gg k$ 时用 $\tilde n$ 代替 $\tilde n - d$(忽略边界效应),协方差项整理为 $2\tilde n\,\mu\,[\delta(w) - (k-1)\mu]$,即论文式 (4)(Waterman 1995):</p>
+<div class="eq">$$
+\begin{aligned}
+\mathbf{E}[X_w] &= \tilde n\,\mu(w) \\
+\mathbf{Var}[X_w] &= \tilde n\,\mu(w)[1-\mu(w)] + 2\tilde n\,\mu(w)\big[\delta(w) - (k-1)\mu(w)\big]
+\end{aligned} \tag{4}
+$$</div>
+<div class="note">
+<b>两个方向的修正。</b>相对于把 $X_w$ 当二项分布的朴素方差 $\tilde n\mu(1-\mu)$:
+<ul>
+<li>$-2\tilde n(k-1)\mu^2$:$k-1$ 种重叠间距下,若不能自重叠,两处同时出现是不可能的(概率 0 而非 $\mu^2$),所以负相关,方差<b>降低</b>。非自重叠词是欠离散的。</li>
+<li>$+2\tilde n\mu\delta(w)$:能自重叠的词在这些间距下同时出现的概率远高于 $\mu^2$,正相关,方差<b>升高</b>。像 <span class="mono">aaaa</span> 这样的词高度成簇。</li>
+</ul>
+</div>
+
+<h3>3.6 二阶阶乘矩 $\mathbf{E}[X_w(X_w-1)]$</h3>
+<p>这是 $D_2^R$ 真正需要的量。由 $\mathbf{E}[X(X-1)] = \mathbf{Var}[X] + (\mathbf{E}X)^2 - \mathbf{E}X$ 代入式 (4):</p>
+<div class="eq">$$
+\begin{aligned}
+\mathbf{E}[X_w(X_w-1)]
+&= \tilde n\mu(1-\mu) + 2\tilde n\mu[\delta - (k-1)\mu] + \tilde n^2\mu^2 - \tilde n\mu \\
+&= \tilde n^2\mu^2 - \tilde n\mu^2 - 2(k-1)\tilde n\mu^2 + 2\tilde n\delta\mu \\
+&= (\tilde n^2 - 2k\tilde n + \tilde n)\,\mu(w)^2 + 2\tilde n\,\delta(w)\,\mu(w)
+\end{aligned} \tag{5}
+$$</div>
+<p>也可以直接算:$\mathbf{E}[X(X-1)] = \sum_{i\ne j}\mathbf{E}[\mathbb{I}_i\mathbb{I}_j]$ 就是"有序位置对同时为 $w$"的期望数,非重叠对贡献 $\mu^2$,重叠对贡献 $\delta$ 相关项,与式 (5) 一致。</p>
+<p>直观上,式 (5) 的三块分别是:</p>
+<table>
+<tr><td>$\tilde n^2\mu^2$</td><td>把所有位置对当独立时的匹配期望,主导项</td></tr>
+<tr><td>$-(2k-1)\tilde n\mu^2$</td><td>扣掉 $i=j$ 的对和 $2(k-1)\tilde n$ 个重叠对中原本按独立算入的 $\mu^2$</td></tr>
+<tr><td>$+2\tilde n\delta\mu$</td><td>重叠对里因自重叠而真正能同时出现的部分</td></tr>
+</table>
+<p>论文称 $X_w(X_w-1)$ 的<b>方差</b>没有简单闭式(引 Ribeca &amp; Raineri 2008;Nuel 2010 的生成函数/自动机数值方法),因此不做标准差归一化。实际上在 i.i.d. 下这个方差有精确闭式,并可推广到 Markov 背景,见 <a href="d2r_markov.html">第二页</a>。</p>
+
+<h3>3.7 Poisson 近似</h3>
+<p>假设 $X_w \sim \text{Poisson}(\lambda = \tilde n\mu(w))$。Poisson 的方差等于均值,一阶项恰好抵消:</p>
+<div class="eq">$$
+\mathbf{E}[X_w(X_w-1)] = \mathbf{Var}[X_w] + (\mathbf{E}X_w)^2 - \mathbf{E}X_w
+= \tilde n\mu + [\tilde n\mu]^2 - \tilde n\mu = [\tilde n\,\mu(w)]^2 \tag{6}
+$$</div>
+<p>(这正是 Poisson 的二阶阶乘矩 $\lambda^2$。)对照式 (5),它保留了 $\tilde n^2$ 主导项,丢掉了 $O(\tilde n)$ 的项 $-(2k-1)\tilde n\mu^2 + 2\tilde n\delta\mu$,其相对大小约为 $(\tilde n\mu)^{-1}$。</p>
+<div class="warn">
+<b>近似的合理性与边界。</b>$\tilde n$ 大、$k$ 较大时 $\mu$ 很小,单个词的出现是稀有事件。对非自重叠词($\delta=0$),出现事件近似独立,极限为 Poisson;对自重叠词,出现成簇,极限是复合 Poisson(簇的个数 Poisson,簇大小近似几何分布),此时式 (6) 会低估真实的 $\mathbf{E}[X(X-1)]$。论文的处理是:接受这一偏差,补充材料实验表明用式 (6) 和用精确式 (5) 的分类性能相当。
+</div>
+
+<h3>3.8 最终统计量</h3>
+<div class="eq">$$
+\boxed{\; D_2^R = \frac{\sum_w \{ X_w(X_w-1) - [\tilde n\,\mu(w)]^2 \}}{\tilde n(\tilde n-1)} \;} \tag{7}
+$$</div>
+<p>注意分子对全部 $4^k$ 个词求和,但 $X_w=0$ 的词只贡献常数 $-[\tilde n\mu(w)]^2$,而 $\sum_w \mu(w)^2 = \big(\sum_a p_a^2\big)^k$,所以实际只需遍历出现过的词即可。</p>
+
+<h3>3.9 被放弃的变体</h3>
+<ul>
+<li><b>$D_2^{*}$ 式标准化</b>:每项除以 $X_w(X_w-1)$ 的标准差。论文按无闭式处理、逐词数值求;补充材料显示 $k$ 短时略有增益,$k$ 长时无提升甚至失效。<a href="d2r_markov.html">第二页</a>给出的精确闭式可以 $O(k)$ 算出每个词的标准差,若重做这个变体应直接用它。</li>
+<li><b>k-mer 计数向量的范数</b>(欧氏距离思路):能区分,但不如式 (2)。</li>
+</ul>
+
+<h2>4. 参数与阈值</h2>
+<table>
+<tr><th>项目</th><th>建议</th></tr>
+<tr><td>k-mer 大小</td><td>$D_2^R$ 对 $k$ 不敏感。若已知重复类型,取略小于重复单元长度的 $k$ 最稳健,可抵抗不精确重复的噪声。</td></tr>
+<tr><td>背景模型</td><td>i.i.d.,碱基频率从数据估计。可换成 BIC 定阶的 Markov 链,以抑制序列组成本身造成的假重复。</td></tr>
+<tr><td>阈值(有监督)</td><td>已知阳性/阴性训练集,取最小分类错误点。</td></tr>
+<tr><td>阈值(无监督)</td><td>$D_2^R$ 分布呈双峰时取谷底。</td></tr>
+<tr><td>阈值(Q-value)</td><td>模拟零模型序列得经验 p 值,按 Storey (2003) Q-value 控制 FDR。</td></tr>
+</table>
+<p>$D_2^R$ 的零分布与备择分布尚无闭式,阈值只能启发式设定。</p>
+
+<h2>一句话概括</h2>
+<div class="note">
+$D_2^R$ 把 $D_2$ 的跨序列 k-mer 匹配计数改成序列内自匹配计数 $\sum_w X_w(X_w-1)$,减去 i.i.d. 背景下的期望并按 $\binom{\tilde n}{2}$ 归一化。
+精确期望 (5) 含自重叠系数 $\delta(w)$,刻画词的成簇倾向;实用中用 Poisson 近似 $[\tilde n\mu(w)]^2$ 替代,只保留 $\tilde n^2$ 主导项。
+</div>
+
+</body>
+</html>

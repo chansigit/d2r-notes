@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>A. overlapping coefficient 的来历</title>
+<script>
+MathJax = { tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$']] } };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+<style>
+body { max-width: 860px; margin: 40px auto; padding: 0 20px; font: 16px/1.8 -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif; color: #222; }
+h1 { font-size: 1.6em; border-bottom: 2px solid #333; padding-bottom: 6px; }
+h2 { font-size: 1.25em; margin-top: 2em; color: #1a4d8f; }
+h3 { font-size: 1.05em; margin-top: 1.5em; }
+.eq { margin: 0.8em 0; }
+.note { background: #f4f6fa; border-left: 4px solid #1a4d8f; padding: 10px 16px; margin: 1em 0; }
+.warn { background: #fdf6e3; border-left: 4px solid #b58900; padding: 10px 16px; margin: 1em 0; }
+.story { background: #f7f7f7; padding: 10px 16px; margin: 1em 0; border-radius: 4px; }
+/* hover popup: visibility (not display:none) so MathJax can lay out the hidden math */
+.pop { position: relative; border-bottom: 1px dotted #1a4d8f; cursor: help; color: #1a4d8f; }
+.pop .popbox { visibility: hidden; opacity: 0; transition: opacity .15s; position: absolute; left: 0; top: 1.6em; z-index: 10;
+  width: 520px; max-width: 90vw; background: #fff; border: 1px solid #999; box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  padding: 12px 16px; font-size: 0.93em; line-height: 1.6; color: #222; text-align: left; border-radius: 4px; }
+.pop:hover .popbox { visibility: visible; opacity: 1; }
+.popbox h4 { margin: 0 0 4px; font-size: 1em; color: #1a4d8f; }
+.popbox .eq { margin: 4px 0; }
+.popbox hr { border: 0; border-top: 1px solid #ddd; margin: 8px 0; }
+code { background: #eee; padding: 1px 5px; border-radius: 3px; font-size: 0.92em; }
+table { border-collapse: collapse; margin: 1em 0; }
+td, th { border: 1px solid #ccc; padding: 6px 12px; text-align: left; vertical-align: top; }
+.ref { font-size: 0.9em; color: #555; }
+.mono { font-family: monospace; letter-spacing: 2px; }
+</style>
+</head>
+<body>
+
+<h1>A. overlapping coefficient 是怎么想出来的</h1>
+<p class="ref"><a href="index.html">词计数的统计学:从一枚硬币到 Markov 链</a> ▸ 本页 A · <a href="d2r_theory.html">B. i.i.d. 理论</a> · <a href="d2r_markov.html">C. 方差闭式与 Markov</a></p>
+
+<h2>引子:数一个词出现了几次</h2>
+<p>给一段随机字母序列,数某个固定的词出现了几次。这是概率论里最朴素的问题之一:每个位置要么是这个词、要么不是,加起来就是计数。均值一眼就能写出来:位置数乘上单个位置的出现概率。本页只用到这两个记号:词长为 $k$、序列长为 $n$ 时,能放下这个词的位置有 $\tilde n=n-k+1$ 个;任一位置恰好是这个词的概率记作 $\mu(w)$,独立等概率四种碱基下 $\mu(w)=(1/4)^k$。于是期望计数就是 $\tilde n\,\mu(w)$。</p>
+<p>但只要再往前走一步,问"这个计数通常会偏离均值多少",事情就不再简单了。相邻位置共享字母,不独立;而不独立的程度,取决于一个看起来和概率无关的性质:<b>这个词能不能和自己重叠</b>。</p>
+<p>这一页解释这件事为什么会发生,统计学家如何把它变成一个可以算的数,以及这个数如何从独立字母推广到 Markov 链。为了把问题剥到最简单,先不看 DNA,看一枚硬币。</p>
+
+<h2>A1. 直觉:一枚硬币的两个问题</h2>
+
+<div class="story">
+<b>问题一(等待)。</b>反复抛一枚均匀硬币。平均要抛多少次才第一次看到 <span class="mono">HH</span>?多少次才第一次看到 <span class="mono">HT</span>?
+</div>
+<div style="margin:1em 0">两个模式每个位置出现的概率都是 $1/4$,直觉上应该一样。但答案是 <span class="mono">HH</span> 平均要等 <b>6</b> 次,<span class="mono">HT</span> 只要 <b>4</b> 次。
+<span class="pop">(鼠标悬停看计算过程)
+<span class="popbox">
+<h4>按"目前进度"分状态,列方程</h4>
+记 $E$ = 从零开始的期望等待次数,$E_H$ = 手里已经有一个 H 时还需要的期望次数。每抛一次花 1 步,然后看落到哪个状态。
+<hr>
+<b>HH</b>:
+<div class="eq">$$E = 1 + \tfrac12 E_H + \tfrac12 E \qquad(\text{抛出 H 进度到 1;抛出 T 回到零})$$</div>
+<div class="eq">$$E_H = 1 + \tfrac12\cdot 0 + \tfrac12 E \qquad(\text{抛出 H 完成;抛出 T 进度清零})$$</div>
+第一式得 $E = 2 + E_H$,代入第二式:$E_H = 1 + \tfrac12(2+E_H)$,解得 $E_H = 4$,于是 $E = 6$。
+<hr>
+<b>HT</b>:
+<div class="eq">$$E = 1 + \tfrac12 E_H + \tfrac12 E$$</div>
+<div class="eq">$$E_H = 1 + \tfrac12 E_H + \tfrac12\cdot 0 \qquad(\text{抛出 H 仍握着一个 H,进度不丢;抛出 T 完成})$$</div>
+第二式直接给出 $E_H = 2$,于是 $E = 2 + E_H = 4$。
+<hr>
+<b>差别只在 $E_H$ 那一行</b>:HH 失败时回到 $E$(从头再来),HT 失败时留在 $E_H$(进度保住)。
+</span></span></div>
+<p>原因在"失败之后还剩多少进度"。等 <span class="mono">HT</span> 时,你先等一个 H;等到以后,下一次不管抛出 H 还是 T,你都没有损失:抛出 T 就成功,抛出 H 则你仍然握着一个 H,进度不变。等 <span class="mono">HH</span> 时,等到第一个 H 之后,如果下一次抛出 T,进度清零,一切从头再来。<b>能和自己重叠的模式,失败时进度保留得多,首次出现反而更晚</b>。这是所有后续理论的种子。</p>
+
+<div class="story">
+<b>问题二(计数)。</b>抛 $n$ 次,数 <span class="mono">HH</span> 出现了几次、<span class="mono">HT</span> 出现了几次(允许重叠地数)。两个计数的<b>平均值</b>一样,都是 $(n-1)/4$。<b>方差</b>一样吗?
+</div>
+<p>不一样。看序列 <span class="mono">HHHHH</span>:<span class="mono">HH</span> 出现了 4 次,挤在一起;而 <span class="mono">HT</span> 不可能这样挤,因为一次 <span class="mono">HT</span> 出现结束于 T,下一次必须重新等一个 H。所以 <span class="mono">HH</span> 的出现是<b>成簇的</b>(clump):要么一次都没有,要么一连串。成簇的计数波动大,方差大。</p>
+
+<div class="note">
+把两个问题放在一起看,<b>自重叠是唯一的变量</b>。<span class="mono">HH</span> 和 <span class="mono">HT</span> 每个位置的出现概率完全相同,唯一的区别是 <span class="mono">HH</span> 能与自己重叠。所以等待时间的差别(问题一)和方差的差别(问题二),都只能归因于这一点。度量这一点的量,就是 overlapping coefficient $\delta(w)$。
+</div>
+
+<h2>A2. 把直觉变成一个数</h2>
+
+<h3>先描述结构:周期</h3>
+<p>一个词 $w$ 什么时候能和自己错位 $d$ 重叠?当且仅当把 $w$ 向右挪 $d$ 格,重叠部分的字母全都对得上,即 $w$ 的前 $k-d$ 个字母等于后 $k-d$ 个字母。这样的 $d$ 叫 $w$ 的一个<b>周期</b>。</p>
+<p>同一件事还有另一种量法:不问"错开多少",问"重合多少"。错开 $d$ 格后,两份 $w$ 实际重合的字母数是 $u=k-d$,而"重合部分对得上"就是说<b>长度 $u$ 的前缀等于长度 $u$ 的后缀</b>。这样的 $u$ 在字符串学里叫 <b>border</b>。论文用 $\varepsilon_u(w)=1$ 记"$u$ 是一个 border",于是"$d$ 是周期"和"$\varepsilon_{k-d}(w)=1$"是同一句话。周期看错位,border 看重叠,数值上互补到 $k$。KMP 算法失配时能保住的进度,就是最长的 border。</p>
+<table>
+<tr><th>词</th><th>周期 $d$</th><th>重叠长度 $u=k-d$(border)</th><th>说明</th></tr>
+<tr><td class="mono">HH</td><td>$\{1\}$</td><td>$\{1\}$:H</td><td>挪 1 格,重叠一个 H</td></tr>
+<tr><td class="mono">HT</td><td>$\varnothing$</td><td>$\varnothing$</td><td>挪 1 格要 T = H,不成立</td></tr>
+<tr><td class="mono">aaaa</td><td>$\{1,2,3\}$</td><td>$\{3,2,1\}$:aaa, aa, a</td><td>任何错位都能重叠</td></tr>
+<tr><td class="mono">acac</td><td>$\{2\}$</td><td>$\{2\}$:ac</td><td>挪 2 格,ac 对 ac</td></tr>
+<tr><td class="mono">gtacgt</td><td>$\{4\}$</td><td>$\{2\}$:gt</td><td>挪 4 格,gt 对 gt</td></tr>
+<tr><td class="mono">acgt</td><td>$\varnothing$</td><td>$\varnothing$</td><td>不能自重叠</td></tr>
+</table>
+<p>Guibas 和 Odlyzko 在 1981 年把周期集合打包成一个多项式 $c(z)=\sum_{d\in\text{周期}}z^d$,称为<b>自相关多项式</b>(autocorrelation polynomial)。它是纯组合对象,还没有概率。</p>
+
+<h3>再加上概率:重叠之后还差几个新字母</h3>
+<p>周期只回答"能不能重叠",还没有概率。现在开始算概率。要算的是一个<b>条件概率</b>:已知位置 $i$ 处出现了 $w$(这 $k$ 个字母已经落定,是历史记录),问位置 $i+d$ 处也出现 $w$ 的概率有多大。</p>
+<p>把位置 $i+d$ 处那份 $w$ 的 $k$ 个字母分成两段看:</p>
+<ul>
+<li>前 $k-d$ 个字母落在位置 $i+d,\dots,i+k-1$,这些位置<b>已经被第一份 $w$ 占了</b>,字母是定的。它们要等于 $w$ 的前 $k-d$ 个字母,而它们实际上是第一份 $w$ 的后 $k-d$ 个字母。所以这一段不涉及随机性,只是一个是否成立的判断:$d$ 是周期就成立(概率 1),不是周期就不成立(概率 0)。</li>
+<li>后 $d$ 个字母落在位置 $i+k,\dots,i+k+d-1$,这些位置<b>还没有被观测</b>,是新抛出来的。它们要恰好等于 $w$ 的最后 $d$ 个字母。在 i.i.d. 下,这个概率是 $\prod_{j=k-d+1}^{k}p_{w_j}$。</li>
+</ul>
+<p>合起来:</p>
+<div class="eq">$$
+\Pr\big[\,w\text{ 出现在 }i+d\;\big|\;w\text{ 出现在 }i\,\big]
+=\underbrace{\varepsilon_{k-d}(w)}_{\text{重叠部分:0 或 1}}\times\underbrace{\prod_{j=k-d+1}^{k}p_{w_j}}_{\text{新字母部分}}
+$$</div>
+<p>重叠部分不含随机性,整个概率只来自新字母。把 $d=1,\dots,k-1$ 全部加起来,得到的就是"已知一个 $w$,紧跟着(与它重叠地)再出现的 $w$ 的期望个数":</p>
+<div class="eq">$$
+\delta(w)=\sum_{d\in\text{周期}(w)}\;\prod_{j=k-d+1}^{k}p_{w_j}
+=\sum_{d=1}^{k-1}\varepsilon_{k-d}(w)\prod_{j=k-d+1}^{k}p_{w_j}
+$$</div>
+<p>这就是论文里的 overlapping coefficient。它的含义可以一句话说清:<b>看到一个 $w$ 之后,紧接着(与它重叠地)再冒出 $w$ 的期望个数。</b>$\delta=0$ 的词不成簇;$\delta$ 越大越爱成簇。</p>
+<p>例:均匀硬币下 <span class="mono">HH</span> 的 $\delta=p_H=1/2$,<span class="mono">HT</span> 的 $\delta=0$;<span class="mono">aaaa</span> 的 $\delta=p_a+p_a^2+p_a^3$。</p>
+
+<h3>同一个 $\delta$,三种看法</h3>
+<p>上面得到的 $\delta(w)$ 是一个数。它可以从三个不同的角度理解,三个角度说的是同一件事,只是各自方便解释不同的现象。下面每种都用 <span class="mono">HH</span>(均匀硬币,$\delta=1/2$)做例子。</p>
+
+<p><b>看法一:结构。$\delta$ 是把"能不能重叠"加权后的总和。</b><br>
+周期集合只说"哪些错位能对上",是一张 0/1 的清单。$\delta$ 给清单上每一项乘上"新字母的概率"再相加,于是把纯结构变成了一个带概率的数。能重叠的错位越多、新字母越容易抛出,$\delta$ 越大。<span class="mono">HH</span> 只有一个周期 $d=1$,新字母是一个 H,概率 $1/2$,所以 $\delta=1/2$。<span class="mono">HT</span> 没有周期,$\delta=0$。</p>
+
+<p><b>看法二:成簇。$\delta$ 是一次出现"顺带拖出"的重叠出现的期望个数。</b><br>
+刚才的条件概率对每个 $d$ 说的是"已知位置 $i$ 有 $w$,位置 $i+d$ 也有 $w$ 的概率"。把 $d=1,\dots,k-1$ 加起来,按期望的线性性,就是"已知位置 $i$ 有 $w$,紧跟在它后面、与它重叠的位置里还有几个 $w$"的期望值。这正好解释问题二里的成簇现象:$\delta=0$ 的词一次只出现一个,$\delta$ 大的词一出现就容易带出一串。<span class="mono">HH</span> 出现后,下一位有一半机会又是 H,于是平均多带出 $1/2$ 个重叠的 <span class="mono">HH</span>。</p>
+
+<div class="note">
+<b>$\delta$ 是概率吗?有量纲吗?</b><br>
+不是概率,是一个<b>期望个数</b>,无量纲。每一项 $\Pr[w\text{ 在 }i+d\mid w\text{ 在 }i]$ 是概率,但对 $d=1,\dots,k-1$ 求和后就不再是概率,而是
+$$\delta(w)=\mathbf E\big[\,\#\{d\in[1,k-1]:\ w\text{ 出现在 }i+d\}\;\big|\;w\text{ 出现在 }i\,\big],$$
+即"已知位置 $i$ 有一个 $w$,与它重叠的后续位置里平均还有几个 $w$"。它可以大于 1:均匀硬币下 <span class="mono">HH</span> 的 $\delta=1/2$ 看起来像概率,只是巧合;若 $p_H=0.9$、词为 10 个 H,则 $\delta=0.9+0.9^2+\cdots+0.9^9\approx5.5$,意思是看到一个 <span class="mono">HHHHHHHHHH</span> 后平均还会紧跟着数出 5.5 个重叠的同样的词。<br>
+两个常见的有量纲搭配(记号见引子:$\mu(w)$ 是任一位置出现 $w$ 的概率,$\tilde n$ 是位置数):$\delta/\mu$ 的单位是"位置数",是首次出现被推迟的期望长度(见看法三);$\tilde n\mu\delta$ 的单位是"对",是整条序列里重叠的有序出现对的期望个数,方差公式里 $2\tilde n\mu\delta$ 那一项就是它。<br>
+后文提到的 Schbath 的 $a(w)$ 才是一个真正的概率:"这次出现之后簇还会再延伸一步"的概率,恒小于 1。$\delta$ 数的是簇里后续所有重叠出现的个数,$a$ 问的是簇是否延续。
+</div>
+
+<p><b>看法三:等待。$\delta$ 决定首次出现要多等多久。</b><br>
+问题一里 <span class="mono">HH</span> 等 6 次、<span class="mono">HT</span> 等 4 次,用状态方程算出来了。其实有一个通用公式:</p>
+<div class="eq">$$\mathbf E[T_w]=\frac{1+\delta(w)}{\mu(w)}$$</div>
+<p>$\mu(w)$ 仍是任一位置出现 $w$ 的概率。$1/\mu(w)$ 是"平均每多少个位置出现一次 $w$",这一项只由出现概率决定,与重叠无关。多出来的 $\delta/\mu$ 是重叠带来的推迟。为什么重叠会推迟首次出现?因为出现是成簇的:一旦出现就会拖出几个免费的重叠出现,这些出现之间间隔极短,把"平均间隔"拉低了;既然平均间隔是 $1/\mu$,而簇内间隔很短,簇与簇之间的间隔就必须更长。从零开始等第一次出现,等的正是这种簇间的长间隔。<span class="mono">HH</span>:$(1+\tfrac12)/\tfrac14=6$;<span class="mono">HT</span>:$(1+0)/\tfrac14=4$。与状态方程的结果一致。这个公式最早以 Conway 的硬币游戏算法和 Li(1980)的鞅方法出现;脚本 <code>waiting_time_check.py</code> 对 9 个词精确验证了它。</p>
+
+<div class="note">
+<b>还有第四种看法,先按下不表。</b>把每个周期的"新字母概率"当作系数、错位 $d$ 当作次数,写成多项式 $A(z)=\sum_d \varepsilon_{k-d}(w)\big(\prod_{j>k-d}p_{w_j}\big)z^d$,则 $\delta=A(1)$。这个多项式是 Guibas–Odlyzko 自相关多项式的概率加权版本(Régnier–Szpankowski 1998),它能一口气给出计数的所有高阶矩。Part B 讲阶乘矩时再用它。
+</div>
+
+<h3>$\delta$ 是怎么从方差里"掉出来"的</h3>
+<p>把计数写成指示变量之和 $X_w=\sum_i\mathbb I_i$。方差等于所有位置对的协方差之和。相距 $\ge k$ 的两个位置不共享字母,协方差为零;只有相距 $d\lt k$ 的位置对有贡献,而它们能否同时是 $w$,恰好由"$d$ 是不是周期"决定,同时出现的概率恰好是 $\mu(w)\times$(新字母部分的概率 $\prod_{j>k-d}p_{w_j}$)。把 $k-1$ 种距离的贡献加起来,$\delta(w)$ 就自然出现在方差公式里:</p>
+<div class="eq">$$
+\mathbf{Var}[X_w]\approx\tilde n\mu(1-\mu)+2\tilde n\mu\big[\delta(w)-(k-1)\mu\big]
+$$</div>
+<p>所以 $\delta$ 不是谁"发明"的,而是<b>只要老老实实展开协方差就必然遇到的量</b>。不同作者只是给了它不同的名字和记号。</p>
+
+<h3>一个容易混淆的近亲:主周期</h3>
+<p>Schbath(1995)研究"簇"的分布时用的量略有不同:只对<b>主周期</b>(不是更小周期的倍数的周期)求和,记作 $a(w)$。<span class="mono">aaaa</span> 的周期是 $\{1,2,3\}$,主周期只有 $\{1\}$,所以 $a=p_a$ 而 $\delta=p_a+p_a^2+p_a^3$。两者关系:$a/(1-a)=p_a+p_a^2+p_a^3+\cdots\approx\delta$。$a$ 回答"一次出现后簇会不会继续延伸一步",$\delta$ 回答"一次出现后总共拖出几个重叠出现"。前者天然适合几何分布的簇大小(复合 Poisson 近似),后者天然适合方差公式。</p>
+
+<h2>A3. 沿革:从赌徒到基因组</h2>
+
+<table>
+<tr><th>年代</th><th>人物 / 工作</th><th>贡献了什么</th></tr>
+<tr><td>1950</td><td>Feller《概率论及其应用》卷一,第 XIII 章</td><td>把"模式出现"看成<b>更新事件</b>(recurrent event),用更新理论处理 runs 和模式的等待时间。这是把重叠问题纳入概率论框架的起点。</td></tr>
+<tr><td>1966</td><td>Solov'ev</td><td>稀有模式首次出现时间的组合恒等式,已含自重叠修正。</td></tr>
+<tr><td>1969 / 1974</td><td>Penney 的游戏;Conway 的算法(经 Gardner 在《科学美国人》普及)</td><td>两个模式"谁先出现"的赔率可以由二者的重叠结构直接算出。Conway 的"leading number"就是自相关的二进制编码。</td></tr>
+<tr><td>1980–1981</td><td>Li;Gerber &amp; Li</td><td>用<b>鞅</b>(公平赌局)方法几行推出等待时间期望,得到 $\mathbf E[T_w]=\sum_{u:\varepsilon_u=1}1/\mu(w_1\cdots w_u)$。Gerber &amp; Li 已经把它推广到 Markov 链。</td></tr>
+<tr><td>1981</td><td>Guibas &amp; Odlyzko</td><td>提出<b>自相关多项式</b>,用生成函数系统处理模式匹配、周期和非传递游戏。给出了组合语言。</td></tr>
+<tr><td>1982 / 1985</td><td>Blom &amp; Thorburn;Breen, Waterman &amp; Zhang</td><td>多模式的等待时间与更新理论;Waterman 由此进入这一领域。</td></tr>
+<tr><td>1989</td><td>Pevzner, Borodovsky &amp; Mironov,"核酸序列的语言学"</td><td>第一次系统地在 DNA 词计数上使用带重叠修正的均值和方差,用来找"异常频繁"的词。</td></tr>
+<tr><td>1992</td><td>Kleffe &amp; Borodovsky</td><td>词计数在 <b>Markov 链</b>生成的文本中的一阶与二阶矩。这是 $\delta$ 的 Markov 推广第一次写成可算的公式。</td></tr>
+<tr><td>1994</td><td>Fu &amp; Koutras</td><td>Markov 链嵌入(把模式匹配自动机与序列链做乘积),精确分布的通用方法。</td></tr>
+<tr><td>1995</td><td>Waterman《Introduction to Computational Biology》第 12 章</td><td>教科书化。论文式 (4) 直接引用此处。</td></tr>
+<tr><td>1995</td><td>Prum, Rodolphe &amp; de Turckheim;Schbath</td><td>前者:Markov 模型下的异常词检验,并指出参数由样本估计时方差会变。后者:簇与复合 Poisson 近似,引入主周期。</td></tr>
+<tr><td>1998–2000</td><td>Régnier &amp; Szpankowski;Régnier</td><td>把自相关多项式加上概率权重(i.i.d. 与 Markov 统一),所有矩由同一个生成函数导出。第二页的 $W(z)$ 就是这一框架。</td></tr>
+<tr><td>2000</td><td>Reinert, Schbath &amp; Waterman 综述</td><td>集大成:计数、簇数、更新数三种计数方式,精确分布与三种近似,Markov 阶数检验。</td></tr>
+<tr><td>2005</td><td>Lothaire 第 6 章;Robin, Rodolphe &amp; Schbath 专著</td><td>成书。</td></tr>
+<tr><td>2005–2010</td><td>Nuel;Ribeca &amp; Raineri</td><td>用最小 DFA 做最优 Markov 链嵌入,任意模式、任意阶、精确分布,线性时间。</td></tr>
+</table>
+
+<div class="note">
+<b>一句话的沿革。</b>先是赌徒问"等多久"(Feller、Conway、Li),数学家把答案写成自相关多项式(Guibas–Odlyzko),生物学家把它用到 DNA 词频上并加上方差(Pevzner、Kleffe–Borodovsky、Waterman),统计学家再把背景换成 Markov 链并给出分布与近似(Prum、Schbath、Régnier、Reinert),最后计算机科学家用自动机把一切算到精确(Fu–Koutras、Nuel)。$\delta(w)$ 在每一步都在,只是穿着不同的衣服。
+</div>
+
+<h2>A4. 从 i.i.d. 到 Markov:哪些东西还在,哪些是新的</h2>
+
+<h3>到此为止的假设</h3>
+<p>前面所有讨论都建立在一个假设上:序列里每个字母独立地、按同一组概率 $(p_a,p_c,p_g,p_t)$ 抛出来,即 <b>i.i.d. 模型</b>。硬币例子里这个假设天然成立。DNA 不是硬币。</p>
+
+<h3>i.i.d. 的局限</h3>
+<p>i.i.d. 只知道四种碱基各占多少,不知道<b>相邻碱基之间有没有关系</b>。而真实基因组里近邻依赖处处都是,举三个最有名的:</p>
+<ul>
+<li><b>CpG 缺失。</b>哺乳动物基因组里 C 后面接 G 的频率只有独立假设预期的四分之一到五分之一(甲基化胞嘧啶易突变为 T)。i.i.d. 下含 CG 的词全部被高估,不含 CG 的词全部被低估,"异常"的判断整体偏移。</li>
+<li><b>同聚物延伸。</b>A 后面更容易再接 A,poly-A、poly-T 串比独立假设常见得多。i.i.d. 会把这种成分上的偶然当成"重复"。</li>
+<li><b>密码子结构。</b>编码区三个位置的碱基偏好不同,相邻碱基之间的依赖带有周期 3 的节律。</li>
+</ul>
+<p>所有这些都是<b>短程</b>依赖:一个碱基受前面一两个、至多三四个碱基影响。这正是 Markov 链擅长描述的。</p>
+
+<h3>Markov 链多给了什么</h3>
+<p>$m$ 阶 Markov 链说:一个碱基的概率取决于它前面 $m$ 个碱基,$P(x\mid\text{前 }m\text{ 个字母})$。$m=0$ 就是 i.i.d.;$m=1$ 已经能刻画 CpG 缺失和同聚物延伸;$m=2,3$ 能刻画更细的近邻结构。参数只有 $3\cdot4^m$ 个,从一段几千碱基的序列就能估得稳。这是 word count 文献里的主流背景模型(Prum 等 1995;Schbath 1995;Reinert–Schbath–Waterman 2000)。</p>
+<p>在 Markov 链下,"任一位置出现 $w$"的概率不再是单字母概率之积,而是</p>
+<div class="eq">$$\mu(w)=\pi(w_1\cdots w_m)\prod_{j=m+1}^{k}P\big(w_j\mid w_{j-m}\cdots w_{j-1}\big),$$</div>
+<p>$\pi$ 是链的平稳分布。词里每个碱基都以它前面的碱基为条件,于是 CG 少、AA 多这类事实自动进入 $\mu(w)$。</p>
+
+<h3>模型变复杂之后,前面讲的东西还成立吗</h3>
+<p>逐条看。</p>
+<table>
+<tr><th>性质</th><th>i.i.d.</th><th>Markov</th><th>说明</th></tr>
+<tr><td>周期 / border 结构</td><td>—</td><td><b>不变</b></td><td>纯组合性质,只看词本身,与概率模型无关。</td></tr>
+<tr><td>重叠出现的条件概率($d\lt k$)</td><td>$\varepsilon_{k-d}\prod_{j>k-d}p_{w_j}$</td><td><b>形式不变</b>,单字母概率换成条件概率</td><td>重叠部分仍是 0/1 判断;新字母仍然逐个乘,只是每个新字母要以前面 $m$ 个字母为条件。这 $m$ 个字母要么在第一份 $w$ 里、要么在刚补出的新字母里,全部已知。</td></tr>
+<tr><td>非重叠出现的条件概率($d\ge k$)</td><td>$=\mu$,两次出现独立</td><td><b>新东西</b>:$\ne\mu$,随 $d$ 几何收敛到 $\mu$</td><td>第一份 $w$ 结束时链"记住"了 $w$ 的末 $m$ 个字母,这份记忆要过若干步才衰减到平稳分布。所以隔得远的两次出现也有一点相关,相关强度由转移矩阵的第二特征值决定。这是"记忆重叠",与字母重叠无关。</td></tr>
+<tr><td>条件概率只依赖间距 $d$</td><td>成立</td><td><b>仍成立</b>(只要 $k\ge m$)</td><td>关键。$w$ 自己就携带了链所需的全部记忆,所以从一次出现到下一次出现的概率不依赖更早的历史。</td></tr>
+<tr><td>$\delta(w)$</td><td>周期上求和</td><td><b>同样定义</b>,权重换成条件概率之积</td><td>Kleffe &amp; Borodovsky(1992)首次写出 Markov 版的均值与方差,Régnier &amp; Szpankowski(1998)给出统一的生成函数形式。</td></tr>
+<tr><td>均值、方差、高阶矩</td><td>有显式闭式</td><td><b>仍可精确计算</b></td><td>因为"只依赖间距"保住了因子化结构,推导路线原样保留。区别是公式里出现转移矩阵的幂,$m=1$ 时还能手写(4×4 矩阵),更高阶用数值。</td></tr>
+<tr><td>$X_w$ 的精确分布</td><td>自动机 + 动态规划</td><td><b>仍可精确计算</b></td><td>把词的匹配自动机和链的状态做乘积(Fu–Koutras 1994;Nuel 2008),状态数乘 $4^m$,复杂度仍是线性。</td></tr>
+</table>
+
+<div class="note">
+<b>小结。</b>Markov 链带来的变化恰好有两种:<b>旧的权重换成条件概率</b>(重叠部分),<b>新增一项几何衰减的远程相关</b>(非重叠部分)。两种变化都保留了"只依赖间距"这一结构,所以 i.i.d. 下能算的,Markov 下都能算,而且都能算到精确;只是显式公式变长、需要矩阵。这也是为什么文献从 1990 年代起可以顺利地把整套理论搬到 Markov 背景上。
+</div>
+
+<h3>后面几页要做的事</h3>
+<ol>
+<li><b>Part B(i.i.d.,已有大半)</b>:从 $\mu(w)$ 出发,依次推均值、方差(看 $\delta$ 如何出现)、二阶与高阶阶乘矩(用那个按下不表的多项式 $A(z)$),然后用自动机拿到 $X_w$ 的精确分布,再由它得到 $X_w(X_w-1)$ 的分布,并比较 Gaussian、Poisson、复合 Poisson 三种近似各在什么范围可用。</li>
+<li><b>Part C(Markov)</b>:与 Part B 逐节平行,每一节指出哪里换成了条件概率、哪里多了几何衰减项;$m=1$ 全部手写,一般 $m$ 给算法;最后用真实基因组估出的 $m=1,2,3$ 量化与 i.i.d. 的差距。</li>
+<li><b>Part D</b>:参数从同一段序列估计时对方差的影响、阶数 $m$ 怎么选、以及把这些接回具体的统计量。</li>
+</ol>
+
+<h2>文献</h2>
+<ul class="ref">
+<li>Feller W. <i>An Introduction to Probability Theory and Its Applications</i>, Vol. I, Ch. XIII. Wiley, 1950 (3rd ed. 1968).</li>
+<li>Solov'ev AD. A combinatorial identity and its application to the problem concerning the first occurrence of a rare event. <i>Theory Probab. Appl.</i> 11:276–282, 1966.</li>
+<li>Penney W. Problem 95: Penney-Ante. <i>J. Recreational Math.</i> 2:241, 1969. Gardner M. Mathematical Games. <i>Scientific American</i>, Oct 1974.</li>
+<li>Li SYR. A martingale approach to the study of occurrence of sequence patterns in repeated experiments. <i>Ann. Probab.</i> 8:1171–1176, 1980.</li>
+<li>Gerber HU, Li SYR. The occurrence of sequence patterns in repeated experiments and hitting times in a Markov chain. <i>Stoch. Proc. Appl.</i> 11:101–108, 1981.</li>
+<li>Guibas LJ, Odlyzko AM. String overlaps, pattern matching, and nontransitive games. <i>J. Combin. Theory A</i> 30:183–208, 1981. 同年:Periods in strings. <i>J. Combin. Theory A</i> 30:19–42.</li>
+<li>Blom G, Thorburn D. How many random digits are required until given sequences are obtained? <i>J. Appl. Prob.</i> 19:518–531, 1982.</li>
+<li>Breen S, Waterman MS, Zhang N. Renewal theory for several patterns. <i>J. Appl. Prob.</i> 22:228–234, 1985.</li>
+<li>Pevzner PA, Borodovsky MY, Mironov AA. Linguistics of nucleotide sequences I, II. <i>J. Biomol. Struct. Dyn.</i> 6:1013–1038, 1989.</li>
+<li>Kleffe J, Borodovsky M. First and second moment of counts of words in random texts generated by Markov chains. <i>CABIOS</i> 8:433–441, 1992.</li>
+<li>Fu JC, Koutras MV. Distribution theory of runs: a Markov chain approach. <i>JASA</i> 89:1050–1058, 1994. Fu JC, Lou WYW. <i>Distribution Theory of Runs and Patterns and Its Applications</i>. World Scientific, 2003.</li>
+<li>Waterman MS. <i>Introduction to Computational Biology</i>, Ch. 12. Chapman &amp; Hall, 1995.</li>
+<li>Prum B, Rodolphe F, de Turckheim E. Finding words with unexpected frequencies in DNA sequences. <i>JRSS B</i> 57:205–220, 1995.</li>
+<li>Schbath S. Compound Poisson approximation of word counts in DNA sequences. <i>ESAIM P&amp;S</i> 1:1–16, 1995.</li>
+<li>Régnier M, Szpankowski W. On pattern frequency occurrences in a Markovian sequence. <i>Algorithmica</i> 22:631–649, 1998. Régnier M. A unified approach to word occurrence probabilities. <i>Discrete Appl. Math.</i> 104:259–280, 2000.</li>
+<li>Reinert G, Schbath S, Waterman MS. Probabilistic and statistical properties of words: an overview. <i>J. Comput. Biol.</i> 7:1–46, 2000. <a href="https://pubmed.ncbi.nlm.nih.gov/10890386/">PubMed</a></li>
+<li>Lothaire M. <i>Applied Combinatorics on Words</i>, Ch. 6. CUP, 2005. Robin S, Rodolphe F, Schbath S. <i>DNA, Words and Models</i>. CUP, 2005.</li>
+<li>Nuel G. Pattern Markov chains: optimal Markov chain embedding through deterministic finite automata. <i>J. Appl. Prob.</i> 45:226–243, 2008. <a href="http://nuel.perso.math.cnrs.fr/pdf/nuel_pmc_2007_preprint.pdf">preprint</a></li>
+</ul>
+
+</body>
+</html>

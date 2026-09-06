@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>词计数的统计学:从一枚硬币到 Markov 链</title>
+<style>
+body { max-width: 760px; margin: 60px auto; padding: 0 20px; font: 16px/1.8 -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif; color: #222; }
+h1 { font-size: 1.7em; margin-bottom: 0; }
+.sub { color: #666; margin-top: 4px; font-size: 1em; }
+.toc a { display: block; padding: 14px 18px; margin: 14px 0; border: 1px solid #ddd; border-radius: 6px; text-decoration: none; color: #222; }
+.toc a:hover { border-color: #1a4d8f; background: #f4f6fa; }
+.toc b { color: #1a4d8f; }
+.toc small { display: block; color: #555; margin-top: 4px; }
+.soon { opacity: .55; }
+.ref { font-size: 0.9em; color: #555; margin-top: 2.5em; }
+</style>
+</head>
+<body>
+<h1>词计数的统计学:从一枚硬币到 Markov 链</h1>
+<p class="sub">Word Count Statistics from i.i.d. to Markov</p>
+<p>一个词在随机字母序列里出现几次?它的均值、方差、高阶矩和分布是什么?当字母不再独立、而是服从 Markov 链时,这些结论哪些还在、哪些要改?这套笔记从最简单的硬币问题出发,一路推到 Markov 背景下的精确结果。</p>
+<div class="toc">
+<a href="d2r_history.html"><b>A. overlapping coefficient 是怎么想出来的</b><small>硬币 HH 与 HT 的等待与计数 · 周期与 border · δ(w) 的三种看法 · 从赌徒到基因组的沿革 · 从 i.i.d. 到 Markov 哪些性质保留</small></a>
+<a href="d2r_theory.html"><b>B. i.i.d. 背景下的词计数理论</b><small>词频 · 均值 · 方差与 δ 的出现 · 二阶阶乘矩 · Poisson 近似 · 参数与阈值(以 D2R 论文为例)</small></a>
+<a href="d2r_markov.html"><b>C. 方差的精确闭式与 Markov 背景推广</b><small>阶乘矩与生成函数 · Var[X(X−1)] 的完全展开 · Markov 下的 gap 权重、记忆重叠与精确阶乘矩</small></a>
+<a class="soon"><b>D. 落到统计量:估计、阶数与零分布</b><small>参数插入效应 · Markov 阶数选择 · 预计算表 · 统计量自身的零分布(待写)</small></a>
+</div>
+<p class="ref">计划与进度见项目目录 PLAN.md。页面公式由 MathJax 渲染。</p>
+</body>
+</html>

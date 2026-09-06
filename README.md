@@ -1,0 +1,14 @@
+# 词计数的统计学:从一枚硬币到 Markov 链
+
+*Word Count Statistics from i.i.d. to Markov*
+
+一个词在随机字母序列里出现几次?它的均值、方差、高阶矩和分布是什么?当字母服从 Markov 链而非独立时,哪些结论保留、哪些要改?
+这套笔记从硬币问题出发,一路推到 Markov 背景下的精确结果。起点是 D2R 论文
+(Chen et al., *Bioinformatics* 35(22):4596–4606, 2019)中的 overlapping coefficient。
+
+- `index.html` — 总目录
+- `d2r_history.html` — A. overlapping coefficient 是怎么想出来的
+- `d2r_theory.html` — B. i.i.d. 背景下的词计数理论
+- `d2r_markov.html` — C. 方差的精确闭式与 Markov 背景推广
+
+纯静态 HTML,公式由 MathJax(CDN)渲染。直接用浏览器打开 `index.html` 即可。
